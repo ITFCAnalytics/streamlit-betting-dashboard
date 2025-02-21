@@ -1,0 +1,10 @@
+matplotlib
+seaborn
+pandas
+numpy
+statistics
+warnings
+requests
+BeautifulSoup
+os
+streamlit
