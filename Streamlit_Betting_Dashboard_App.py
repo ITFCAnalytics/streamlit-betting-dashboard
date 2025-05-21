@@ -58,23 +58,17 @@ def get_df(path):
     data = data.replace('',0)
     return data
 
-pl_path = 'https://fbref.com/en/comps/9/Premier-League-Stats#all_results2024-202591'
+#pl_table = pd.read_csv(f'{root}Premier League Table 2024-2025.csv')
+pl_table_url = 'https://www.dropbox.com/scl/fi/65icdj8qbdfs2vtxtlidr/Premier-League-Table-2024-2025.csv?rlkey=s4y8qg6dz4rhenwdzs7nyxhs6&st=k6oyswdj&raw=1'
+pl_table = pd.read_csv(pl_table_url)
 
-pl_table = get_df(pl_path)
-pl_table = pl_table.iloc[:, 0:1]
-#pl_table['Position'] = range(1, len(pl_table) + 1)
+#ch_table = pd.read_csv(f'{root}Championship Table 2024-2025.csv')
+ch_table_url = 'https://www.dropbox.com/scl/fi/2mgymare340j6heduzljb/Championship-Table-2024-2025.csv?rlkey=xwo6kd0eerdbulq6vb6n15a76&st=gvx46m4e&raw=1'
+ch_table = pd.read_csv(ch_table_url)
 
-pl_table.head()
-
-ch_path = 'https://fbref.com/en/comps/10/Championship-Stats#all_results2024-2025101'
-
-ch_table = get_df(ch_path)
-ch_table = ch_table.iloc[:, 0:1]
-#ch_table['Position'] = range(1, len(ch_table) + 1)
-
-ch_table.head()
-
-df = pd.read_csv(f'{root}Final FBRef Match Logs for 2024-2025.csv')
+#df = pd.read_csv(f'{root}Final FBRef Match Logs for 2024-2025.csv')
+df_url = 'https://www.dropbox.com/scl/fi/blpkduq6a0fe7r6kufvvb/Final-FBRef-Match-Logs-for-2024-2025.csv?rlkey=kz1ccdvprkfpag5df2wb57koh&st=060mg73u&raw=1'
+df = pd.read_csv(df_url)
 
 df = df[df['Round'].str.contains('Matchweek', case=True)]
 
@@ -84,20 +78,23 @@ points_conditions = [
     (df['Result'] == 'D'),
     (df['Result'] == 'L')
 ]
-points_results = ['3', '1', '0']
+points_results = [3, 1, 0]
 
 #df_filtered = df[columns]
 df['Points'] = np.select(points_conditions, points_results)
 df['Gameweek'] = df.groupby('Team').cumcount() + 1
 df['Score'] = df['GF'].astype(str) + '-' + df['GA'].astype(str)
-df['6 Game xGD avg'] = df.groupby('Team')['xGD'].transform(lambda x: x.rolling(window=6, min_periods=1).mean())
+df['5 Game xGD avg'] = df.groupby('Team')['xGD'].transform(lambda x: x.rolling(window=5, min_periods=1).mean())
+df['5 Game xGF avg'] = df.groupby('Team')['xG'].transform(lambda x: x.rolling(window=5, min_periods=1).mean())
+df['5 Game xGA avg'] = df.groupby('Team')['xGA'].transform(lambda x: x.rolling(window=5, min_periods=1).mean())
+df['Formation'] = df['Formation'].replace('5-3-2', '3-5-2').replace('3-5-1-1', '3-5-2').replace('5-4-1', '3-4-3').replace('4-1-4-1', '4-3-3').replace('4-4-1-1', '4-2-3-1').replace('4-5-1', '4-3-3').replace('3-2-4-1', '4-3-3').replace('3-1-4-2', '3-5-2').replace('4-1-3-2', '4-4-2')
+df['Opp Formation'] = df['Opp Formation'].replace('5-3-2', '3-5-2').replace('3-5-1-1', '3-5-2').replace('5-4-1', '3-4-3').replace('4-1-4-1', '4-3-3').replace('4-4-1-1', '4-2-3-1').replace('4-5-1', '4-3-3').replace('3-2-4-1', '4-3-3').replace('3-1-4-2', '3-5-2').replace('4-1-3-2', '4-4-2')
 
 df_new = df.copy()
 
 #df_new = df_new[(df_new['Team'] == 'Millwall') & (df_new['Opponent'] == 'Portsmouth')]
 
-pd.set_option('display.max_columns', None) 
-df_new.head()
+pd.set_option('display.max_columns', None)
 
 def team_results(team):
     
@@ -151,10 +148,19 @@ def team_results(team):
     return styled_table
 
 def average_xGD(team):
-
+    # Clear the current figure to avoid overlaying plots
+    plt.clf()
+    
+    # Filter data for the specified team
     team_data = df_new[df_new['Team'] == team]
+    
+    # Check if there is data for the team
+    if team_data.empty:
+        st.write(f"No data available for {team}.")
+        return
+    
     Gameweek = team_data['Gameweek'].values  # Convert to numpy array
-    xGD = team_data['6 Game xGD avg'].values  # Convert to numpy array
+    xGD = team_data['5 Game xGD avg'].values  # Convert to numpy array
 
     # Map xGD values to colors
     norm = (xGD + 2.5) / 5  # Scale xGD from -2.5 to 2.5 to [0, 1]
@@ -168,18 +174,71 @@ def average_xGD(team):
     plt.ylim(-2.75, 2.75)  # Set y-axis limits
     plt.xlabel('Gameweek', color='white')
     plt.ylabel('xGD', color='white')
-    #plt.figure(figsize=(8, 4))
-    #plt.title(f'6 Game xGD Moving Average | {team}')
-    # Set background color to transparent
     plt.gca().set_facecolor('none')  # Make the axes background transparent
     plt.gcf().patch.set_facecolor('none')  # Make the figure background transparent
+
     # Set axis outlines (spines) to white
     for spine in plt.gca().spines.values():
         spine.set_color('white')  # Set the color of the spines to white
+
     # Change gridlines and ticks to white
     plt.tick_params(axis='both', colors='white')  # Set tick marks to white
 
+    st.pyplot(plt)  # Call the show method
 
+def average_xGF_xGA(team):
+    # Clear the current figure to avoid overlaying plots
+    plt.clf()
+    
+    # Filter data for the specified team
+    team_data = df_new[df_new['Team'] == team]
+    
+    # Check if there is data for the team
+    if team_data.empty:
+        st.write(f"No data available for {team}.")
+        return
+    
+    Gameweek = team_data['Gameweek'].values  # Convert to numpy array
+    xGF = team_data['5 Game xGF avg'].values  # Convert to numpy array
+    xGA = team_data['5 Game xGA avg'].values  # Convert to numpy array
+
+    # Plot each segment for xGF
+    for i in range(len(Gameweek) - 1):
+        plt.plot(Gameweek[i:i+2], xGF[i:i+2], color='green', linewidth=3)
+
+    # Add linear trend line for xGF starting from Gameweek 5
+    valid_indices_GF = Gameweek >= 5
+    if valid_indices_GF.any():  # Check if there are valid indices
+        zGF = np.polyfit(Gameweek[valid_indices_GF], xGF[valid_indices_GF], 1)  # Fit a linear polynomial
+        pGF = np.poly1d(zGF)  # Create a polynomial function
+        plt.plot(Gameweek[valid_indices_GF], pGF(Gameweek[valid_indices_GF]), color='green', linestyle='--', linewidth=1.5, label='Trend Line xGF')
+
+    # Plot each segment for xGA
+    for i in range(len(Gameweek) - 1):
+        plt.plot(Gameweek[i:i+2], xGA[i:i+2], color='red', linewidth=3)
+
+    # Add linear trend line for xGA starting from Gameweek 5
+    valid_indices_GA = Gameweek >= 5
+    if valid_indices_GA.any():  # Check if there are valid indices
+        zGA = np.polyfit(Gameweek[valid_indices_GA], xGA[valid_indices_GA], 1)  # Fit a linear polynomial
+        pGA = np.poly1d(zGA)  # Create a polynomial function
+        plt.plot(Gameweek[valid_indices_GA], pGA(Gameweek[valid_indices_GA]), color='red', linestyle='--', linewidth=1.5, label='Trend Line xGA')
+
+    plt.axhline(0, color='white', linewidth=0.8, linestyle='--')  # Add gridline at y=0
+    plt.ylim(0, 4)  # Set y-axis limits
+    plt.xlabel('Gameweek', color='white')
+    plt.ylabel('xG', color='white')
+    plt.gca().set_facecolor('none')  # Make the axes background transparent
+    plt.gcf().patch.set_facecolor('none')  # Make the figure background transparent
+
+    # Set axis outlines (spines) to white
+    for spine in plt.gca().spines.values():
+        spine.set_color('white')  # Set the color of the spines to white
+
+    # Change gridlines and ticks to white
+    plt.tick_params(axis='both', colors='white')  # Set tick marks to white
+
+    plt.legend()  # Add legend to the plot
     st.pyplot(plt)  # Call the show method
 
 def possession_impact(team):
@@ -192,7 +251,7 @@ def possession_impact(team):
 
     # Calculate average points and xGD for possession >= 50
     avg_points_51 = possession_51['Points'].astype(float).mean() if not possession_51.empty else 0
-    avg_xGD_51 = possession_51['6 Game xGD avg'].mean() if not possession_51.empty else 0
+    avg_xGD_51 = possession_51['xGD'].mean() if not possession_51.empty else 0
     count_games_51 = possession_51['Gameweek'].count() if not possession_51.empty else 0
     count_wins_51 = possession_51['Result'].value_counts().get('W', 0) if not possession_51.empty else 0
     count_draws_51 = possession_51['Result'].value_counts().get('D', 0) if not possession_51.empty else 0
@@ -200,7 +259,7 @@ def possession_impact(team):
 
     # Calculate average points and xGD for possession < 50
     avg_points_49 = possession_49['Points'].astype(float).mean() if not possession_49.empty else 0
-    avg_xGD_49 = possession_49['6 Game xGD avg'].mean() if not possession_49.empty else 0
+    avg_xGD_49 = possession_49['xGD'].mean() if not possession_49.empty else 0
     count_games_49 = possession_49['Gameweek'].count() if not possession_51.empty else 0
     count_wins_49 = possession_49['Result'].value_counts().get('W', 0) if not possession_51.empty else 0
     count_draws_49 = possession_49['Result'].value_counts().get('D', 0) if not possession_51.empty else 0
@@ -208,34 +267,27 @@ def possession_impact(team):
 
     # Create a DataFrame to display the results in a single row
     results_df = pd.DataFrame({
-        'Possession': ['< 50', '>= 50'],
-        'Games': [count_games_49, count_games_51],
-        'Wins': [count_wins_49, count_wins_51],
-        'Draws': [count_draws_49, count_draws_51],
-        'Losses': [count_losses_49, count_losses_51],
-        'Points per Game': [avg_points_49, avg_points_51],
-        'xGD': [avg_xGD_49, avg_xGD_51]
+        'Possession': ['>= 50', '< 50'],
+        'Games': [count_games_51, count_games_49],
+        'Wins': [count_wins_51, count_wins_49],
+        'Draws': [count_draws_51, count_draws_49],
+        'Losses': [count_losses_51, count_losses_49],
+        'Points per Game': [avg_points_51, avg_points_49],
+        'xGD': [avg_xGD_51, avg_xGD_49]
     })
 
     # Define a function to apply color mapping for Points per Game
     def color_points(value):
-        if value < 1:
-            return 'background-color: red; color: white;'
-        elif 1 <= value < 1.8:
-            return 'background-color: yellow; color: black;'
-        elif value >= 1.8:
-            return 'background-color: green; color: white;'
-        return ''
+        norm_value = (value - 0.5) / 2  # Scale Points from 0.5 to 2.5 to [0, 1]
+        norm_value = np.clip(norm_value, 0, 1)  # Ensure the value is within [0, 1]
+        color = cm.RdYlGn(norm_value)  # Use RdYlGn colormap for scaling
+        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
 
     # Define a function to apply color mapping for xGD
     def color_xgd(value):
-        if value < -0.2:
-            return 'background-color: red; color: white;'
-        elif -0.2 <= value < 0.5:
-            return 'background-color: yellow; color: black;'
-        elif value >= 0.5:
-            return 'background-color: green; color: white;'
-        return ''
+        norm_value = (value + 1.4) / 2.8  # Scale xGD from -1.4 to 1.4 to [0, 1])
+        color = cm.RdYlGn(norm_value)  # Use the RdYlGn colormap
+        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
 
     # Apply the styling to the DataFrame
     styled_df = results_df.style.applymap(color_points, subset=['Points per Game']) \
@@ -247,21 +299,21 @@ def home_away(team):
 
     team_data = df_new[df_new['Team'] == team]
 
-    #filter data based on possession
+    #filter data based on home/away
     home = team_data[team_data['Venue'] == 'Home']
     away = team_data[team_data['Venue'] == 'Away']
 
-    # Calculate average points and xGD for possession >= 50
+    # Calculate average points and xGD for home/away
     avg_points_h = home['Points'].astype(float).mean() if not home.empty else 0
-    avg_xGD_h = home['6 Game xGD avg'].mean() if not home.empty else 0
+    avg_xGD_h = home['xGD'].mean() if not home.empty else 0
     count_games_h = home['Gameweek'].count() if not home.empty else 0
     count_wins_h = home['Result'].value_counts().get('W', 0) if not home.empty else 0
     count_draws_h = home['Result'].value_counts().get('D', 0) if not home.empty else 0
     count_losses_h = home['Result'].value_counts().get('L', 0) if not home.empty else 0
 
-    # Calculate average points and xGD for possession < 50
+    # Calculate average points and xGD for home/away
     avg_points_a = away['Points'].astype(float).mean() if not away.empty else 0
-    avg_xGD_a = away['6 Game xGD avg'].mean() if not away.empty else 0
+    avg_xGD_a = away['xGD'].mean() if not away.empty else 0
     count_games_a = away['Gameweek'].count() if not away.empty else 0
     count_wins_a = away['Result'].value_counts().get('W', 0) if not away.empty else 0
     count_draws_a = away['Result'].value_counts().get('D', 0) if not away.empty else 0
@@ -280,6 +332,202 @@ def home_away(team):
 
     # Define a function to apply color mapping for Points per Game
     def color_points(value):
+        norm_value = (value - 0.5) / 2  # Scale Points from 0.5 to 2.5 to [0, 1]
+        norm_value = np.clip(norm_value, 0, 1)  # Ensure the value is within [0, 1]
+        color = cm.RdYlGn(norm_value)  # Use RdYlGn colormap for scaling
+        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+
+
+    # Define a function to apply color mapping for xGD
+    def color_xgd(value):
+        norm_value = (value + 1.4) / 2.8  # Scale xGD from -1.4 to 1.4 to [0, 1])
+        color = cm.RdYlGn(norm_value)  # Use the RdYlGn colormap
+        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+
+    # Apply the styling to the DataFrame
+    styled_df = results_df.style.applymap(color_points, subset=['Points per Game']) \
+                                 .applymap(color_xgd, subset=['xGD'])
+
+    return styled_df
+
+import pandas as pd
+
+def opp_formation(team):
+    # Filter the data for the specific team
+    team_data = df_new[df_new['Team'] == team]
+
+    # Get the unique opposition formations
+    unique_formations = team_data['Opp Formation'].unique()
+
+    # Initialize a list to hold results for each formation
+    results = []
+
+    for formation in unique_formations:
+        # Filter the data for the specific formation
+        formation_data = team_data[team_data['Opp Formation'] == formation]
+
+        # Calculate the statistics for the formation
+        avg_points = formation_data['Points'].astype(float).mean() if not formation_data.empty else 0
+        avg_xGD = formation_data['xGD'].mean() if not formation_data.empty else 0
+        count_games = formation_data['Gameweek'].count() if not formation_data.empty else 0
+        count_wins = formation_data['Result'].value_counts().get('W', 0) if not formation_data.empty else 0
+        count_draws = formation_data['Result'].value_counts().get('D', 0) if not formation_data.empty else 0
+        count_losses = formation_data['Result'].value_counts().get('L', 0) if not formation_data.empty else 0
+
+        # Append the results as a dictionary
+        results.append({
+            'Oppo Formation': formation,
+            'Games': count_games,
+            'Wins': count_wins,
+            'Draws': count_draws,
+            'Losses': count_losses,
+            'Points per Game': avg_points,
+            'xGD': avg_xGD
+        })
+
+    # Convert the list of results into a DataFrame
+    results_df = pd.DataFrame(results)
+
+    # Define a function to apply color mapping for Points per Game
+    def color_points(value):
+        norm_value = (value - 0.5) / 2  # Scale Points from 0.5 to 2.5 to [0, 1]
+        norm_value = np.clip(norm_value, 0, 1)  # Ensure the value is within [0, 1]
+        color = cm.RdYlGn(norm_value)  # Use RdYlGn colormap for scaling
+        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+
+
+    # Define a function to apply color mapping for xGD
+    def color_xgd(value):
+        norm_value = (value + 1.4) / 2.8  # Scale xGD from -1.4 to 1.4 to [0, 1])
+        color = cm.RdYlGn(norm_value)  # Use the RdYlGn colormap
+        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+
+    # Apply the styling to the DataFrame
+    styled_df = results_df.style.applymap(color_points, subset=['Points per Game']) \
+                                 .applymap(color_xgd, subset=['xGD'])
+
+    return styled_df
+
+def get_formation_analysis(team1, team2):
+    """Analyze formation usage and performance against most used formations."""
+    team1_data = df_new[df_new['Team'] == team1]
+    team2_data = df_new[df_new['Team'] == team2]
+    
+    # Get most used formation for each team
+    team1_formation = team1_data['Formation'].mode().iloc[0]
+    team1_formation_count = team1_data['Formation'].value_counts().iloc[0]
+    team2_formation = team2_data['Formation'].mode().iloc[0]
+    team2_formation_count = team2_data['Formation'].value_counts().iloc[0]
+    
+    # Analyze team1's performance against team2's most used formation
+    team1_vs_formation = team1_data[team1_data['Opp Formation'] == team2_formation]
+    results_team1 = []
+    
+    for formation in team1_vs_formation['Formation'].unique():
+        formation_data = team1_vs_formation[team1_vs_formation['Formation'] == formation]
+        
+        # Calculate statistics
+        count_games = formation_data['Gameweek'].count()
+        count_wins = formation_data['Result'].value_counts().get('W', 0)
+        count_draws = formation_data['Result'].value_counts().get('D', 0)
+        count_losses = formation_data['Result'].value_counts().get('L', 0)
+        avg_points = formation_data['Points'].astype(float).mean()
+        avg_xGD = formation_data['xGD'].mean()
+        
+        results_team1.append({
+            'Formation': formation,
+            'Oppo Formation': team2_formation,
+            'Games': count_games,
+            'Wins': count_wins,
+            'Draws': count_draws,
+            'Losses': count_losses,
+            'Points per Game': avg_points,
+            'xGD': avg_xGD
+        })
+    
+    # Analyze team2's performance against team1's most used formation
+    team2_vs_formation = team2_data[team2_data['Opp Formation'] == team1_formation]
+    results_team2 = []
+    
+    for formation in team2_vs_formation['Formation'].unique():
+        formation_data = team2_vs_formation[team2_vs_formation['Formation'] == formation]
+        
+        # Calculate statistics
+        count_games = formation_data['Gameweek'].count()
+        count_wins = formation_data['Result'].value_counts().get('W', 0)
+        count_draws = formation_data['Result'].value_counts().get('D', 0)
+        count_losses = formation_data['Result'].value_counts().get('L', 0)
+        avg_points = formation_data['Points'].astype(float).mean()
+        avg_xGD = formation_data['xGD'].mean()
+        
+        results_team2.append({
+            'Formation': formation,
+            'Oppo Formation': team1_formation,
+            'Games': count_games,
+            'Wins': count_wins,
+            'Draws': count_draws,
+            'Losses': count_losses,
+            'Points per Game': avg_points,
+            'xGD': avg_xGD
+        })
+    
+    # Create separate DataFrames
+    team1_formations = pd.DataFrame(results_team1)
+    team2_formations = pd.DataFrame(results_team2)
+    
+    # Define a function to apply color mapping for Points per Game
+    def color_points(value):
+        norm_value = value / 3  # Scale xGD from -2.5 to 2.5 to [0, 1])
+        color = cm.RdYlGn(norm_value)  # Use the RdYlGn colormap
+        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+
+
+    # Define a function to apply color mapping for xGD
+    def color_xgd(value):
+        norm_value = (value + 1.4) / 2.8  # Scale xGD from -1.4 to 1.4 to [0, 1])
+        color = cm.RdYlGn(norm_value)  # Use the RdYlGn colormap
+        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+    
+    # Apply styling to both DataFrames
+    if not team1_formations.empty:
+        styled_team1 = team1_formations.style.applymap(color_points, subset=['Points per Game']) \
+                                            .applymap(color_xgd, subset=['xGD'])
+    else:
+        styled_team1 = team1_formations
+        
+    if not team2_formations.empty:
+        styled_team2 = team2_formations.style.applymap(color_points, subset=['Points per Game']) \
+                                            .applymap(color_xgd, subset=['xGD'])
+    else:
+        styled_team2 = team2_formations
+    
+    return {
+        'team1_formation': team1_formation,
+        'team1_formation_count': team1_formation_count,
+        'team2_formation': team2_formation,
+        'team2_formation_count': team2_formation_count,
+        'team1_formations': styled_team1,
+        'team2_formations': styled_team2
+    }
+
+def match_logs(team):
+
+    team_data = df_new[df_new['Team'] == team]
+
+    team_data['Points'] = pd.to_numeric(team_data['Points'], errors='coerce')
+
+    filtered_df = pd.DataFrame(['Gameweek', 'Venue', 'Opponent', 'Formation', 'Opp Formation', 'Score', 'Points', 'xG', 'xGA', 'xGD', 'Poss'],).T
+    filtered_df = filtered_df.rename(columns=filtered_df.iloc[0])
+    filtered_df = filtered_df.reindex(filtered_df.index.drop(0))
+
+    # Select only the columns that are in filtered_df from team_data
+    team_data_filtered = team_data[filtered_df.columns]
+
+    # Concatenate the filtered DataFrames
+    final_df = pd.concat([filtered_df, team_data_filtered], ignore_index=True)
+    
+    # Define a function to apply color mapping for Points per Game
+    def color_points(value):
         if value < 1:
             return 'background-color: red; color: white;'
         elif 1 <= value < 1.8:
@@ -289,19 +537,76 @@ def home_away(team):
         return ''
 
     # Define a function to apply color mapping for xGD
+    #def color_xgd(value):
+        #if value < -0.2:
+            #return 'background-color: red; color: white;'
+        #elif -0.2 <= value < 0.5:
+            #return 'background-color: yellow; color: black;'
+        #elif value >= 0.5:
+            #return 'background-color: green; color: white;'
+        #return ''
+
+    # Define a function to apply color mapping for xGD
     def color_xgd(value):
-        if value < -0.2:
-            return 'background-color: red; color: white;'
-        elif -0.2 <= value < 0.5:
-            return 'background-color: yellow; color: black;'
-        elif value >= 0.5:
-            return 'background-color: green; color: white;'
-        return ''
+        norm_value = (value + 1.4) / 2.8  # Scale xGD from -1.4 to 1.4 to [0, 1])
+        color = cm.RdYlGn(norm_value)  # Use the RdYlGn colormap
+        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+
+    # Define a function to apply color mapping for xGD
+    #def color_xgf(value):
+        #if value < 0.7:
+            #return 'background-color: red; color: white;'
+        #elif 0.7 <= value < 1.4:
+            #return 'background-color: yellow; color: black;'
+        #elif value >= 1.4:
+            #return 'background-color: green; color: white;'
+        #return ''
+
+    def color_xgf(value):
+        norm_value = (value - 1)  # Scale xGD from 0 to 5 to [-0.5, 2] with midpoint at 1
+        norm_value = np.clip(norm_value, 0, 1)  # Ensure the value is within [0, 1]
+        color = cm.RdYlGn(norm_value)  # Use RdYlGn colormap for scaling
+        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+
+    # Define a function to apply color mapping for xGD
+    #def color_xga(value):
+        #if value > 1.4:
+            #return 'background-color: red; color: white;'
+        #elif 1.4 >= value > 0.7:
+            #return 'background-color: yellow; color: black;'
+        #elif value <= 0.7:
+            #return 'background-color: green; color: white;'
+        #return ''
+
+    def color_xga(value):
+        norm_value = (3 - value) / 3  # Scale xGA from 0 to 5 to [1, 0] (green for lower values)
+        norm_value = np.clip(norm_value, 0, 1)  # Ensure the value is within [0, 1]
+        color = cm.RdYlGn(norm_value)  # Use RdYlGn colormap for scaling
+        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+
+    # Define a function to apply color mapping for possession
+    #def color_poss(value):
+        #if value < 45:
+            #return 'background-color: red; color: white;'
+        #elif 45 <= value < 55:
+            #return 'background-color: yellow; color: black;'
+        #elif value >= 55:
+            #return 'background-color: green; color: white;'
+        #return ''
+
+    def color_poss(value):
+        norm_value = (value - 30) / 40  # Scale Possession from 30 to 70 to [0, 1]
+        norm_value = np.clip(norm_value, 0, 1)  # Ensure the value is within [0, 1]
+        color = cm.RdYlGn(norm_value)  # Use RdYlGn colormap for scaling
+        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
 
     # Apply the styling to the DataFrame
-    styled_df = results_df.style.applymap(color_points, subset=['Points per Game']) \
-                                 .applymap(color_xgd, subset=['xGD'])
-
+    styled_df = final_df.style.applymap(color_points, subset=['Points']) \
+                                 .applymap(color_xgd, subset=['xGD']) \
+                                    .applymap(color_poss, subset=['Poss']) \
+                                        .applymap(color_xgf, subset=['xG']) \
+                                            .applymap(color_xga, subset=['xGA']) \
+    
     return styled_df
 
 ## CREATE STREAMLIT DASHBOARD ##
@@ -309,30 +614,171 @@ def home_away(team):
 # title, subheader and player/dashboard filter
 st.set_page_config(page_title="Betting Dashboard -", layout="wide")
 st.title(f"Betting Dashboard")
-st.subheader("Filter by team to see their rolling xGD, results plotted against the current league table, effect of possession and home/away advantage on performances and results:")
+st.subheader("Select the 'One Team View' to filter by team to see their rolling xGD, results plotted against the current league table, effect of possession and home/away advantage on performances and results. Or filter by the 'Two Team Comparison' to see how teams may match up against each other:")
+function_filter = st.radio("Select a view to apply:", ("One Team View", "Two Team Comparison"))
 
-unique_team = df_new['Team'].sort_values().unique()
-team_filter = st.selectbox('Select a team:', unique_team, index=0)
+if function_filter == "One Team View":
+    unique_team = df_new['Team'].sort_values().unique()
+    team_filter = st.selectbox('Select a team:', unique_team, index=0)
 
-col1, col2 = st.columns(2)
+    col1, col2 = st.columns(2)
 
-with col1:
-    st.subheader(f'6 Game xGD Moving Average | {team_filter}:')
-    average_xGD(team_filter)
+    with col1:
+        st.subheader(f'5 Game xGD Moving Average | {team_filter}:')
+        average_xGD(team_filter)
 
-with col2:
-    st.subheader(f'{team_filter} Results Table:')
-    results_table = team_results(team_filter)
-    st.dataframe(results_table)
+    with col2:
+        st.subheader(f'5 Game xGF vs xGA Moving Average | {team_filter}:')
+        average_xGF_xGA(team_filter)
 
-col3, col4 = st.columns(2)
+    col3, col4 = st.columns(2)
 
-with col3:
-    st.subheader(f'Effect of Possession on {team_filter}:')
-    possession_table = possession_impact(team_filter)
-    st.dataframe(possession_table)
+    with col3:
+        st.subheader(f'Effect of Possession on {team_filter}:')
+        possession_table = possession_impact(team_filter)
+        st.table(possession_table)
 
-with col4:
-    st.subheader(f'Home/Away Performance for {team_filter}:')
-    home_away_table = home_away(team_filter)
-    st.dataframe(home_away_table)
+    with col4:
+        st.subheader(f'Effect of Opposition Formation on {team_filter}:')
+        opp_formation_table = opp_formation(team_filter)
+        st.table(opp_formation_table)
+
+    col5, col6 = st.columns(2)
+
+    with col5:
+        st.subheader(f'Home/Away Performance for {team_filter}:')
+        home_away_table = home_away(team_filter)
+        st.table(home_away_table)
+
+    with col6:
+        st.subheader(f'{team_filter} Results Table:')
+        results_table = team_results(team_filter)
+        st.table(results_table)
+
+    col7 = st.columns(1)[0]
+
+    with col7:
+        with st.expander(f'{team_filter} Match Logs:', expanded=True):
+            match_logs_table = match_logs(team_filter)
+            st.table(match_logs_table)
+
+else:
+    col1_select, col2_select = st.columns(2)
+    
+    with col1_select:
+        team1 = st.selectbox('Select first team:', df_new['Team'].sort_values().unique(), index=0)
+    
+    with col2_select:
+        # Filter out the first team from the second dropdown
+        team2_options = df_new[df_new['Team'] != team1]['Team'].sort_values().unique()
+        team2 = st.selectbox('Select second team:', team2_options, index=0)
+    
+    st.title(f"{team1} vs {team2} Comparison")
+    
+    # Get formation analysis
+    formation_analysis = get_formation_analysis(team1, team2)
+    
+    # Display formation analysis at the top
+    st.subheader("Formation Analysis")
+    formation_col1, formation_col2 = st.columns(2)
+    
+    with formation_col1:
+        st.write(f"{team1} most used formation: {formation_analysis['team1_formation']} ({formation_analysis['team1_formation_count']} times)")
+        st.write(f"Performance against a {formation_analysis['team2_formation']}:")
+        st.table(formation_analysis['team1_formations'])
+    
+    with formation_col2:
+        st.write(f"{team2} most used formation: {formation_analysis['team2_formation']} ({formation_analysis['team2_formation_count']} times)")
+        st.write(f"Performance against a {formation_analysis['team1_formation']}:")
+        st.table(formation_analysis['team2_formations'])
+    
+    st.subheader("Click the tabs below to see the metrics for each of the team's selected:")
+
+    # Create tabs for each team's detailed analysis
+    tab1, tab2 = st.tabs([team1, team2])
+    
+    # Team 1 tab
+    with tab1:
+        col1_t1, col2_t1 = st.columns(2)
+        
+        with col1_t1:
+            st.subheader(f'5 Game xGD Moving Average | {team1}:')
+            average_xGD(team1)
+
+        with col2_t1:
+            st.subheader(f'5 Game xGF vs xGA Moving Average | {team1}:')
+            average_xGF_xGA(team1)
+        
+        col3_t1, col4_t1 = st.columns(2)
+        
+        with col3_t1:
+            st.subheader(f'Effect of Possession on {team1}:')
+            possession_table = possession_impact(team1)
+            st.table(possession_table)
+        
+        with col4_t1:
+            st.subheader(f'Effect of Opposition Formation on {team1}:')
+            opp_formation_table = opp_formation(team1)
+            st.table(opp_formation_table)
+
+        col5_t1, col6_t1 = st.columns(2)
+
+        with col5_t1:
+            st.subheader(f'Home/Away Performance for {team1}:')
+            home_away_table = home_away(team1)
+            st.table(home_away_table)
+
+        with col6_t1:
+            st.subheader(f'{team1} Results Table:')
+            results_table = team_results(team1)
+            st.table(results_table)
+
+        col7_t1 = st.columns(1)[0]
+
+        with col7_t1:
+            with st.expander(f'{team1} Match Logs:', expanded=True):
+                match_logs_table = match_logs(team1)
+                st.table(match_logs_table)
+    
+    # Team 2 tab
+    with tab2:
+        col1_t2, col2_t2 = st.columns(2)
+        
+        with col1_t2:
+            st.subheader(f'5 Game xGD Moving Average | {team2}:')
+            average_xGD(team2)
+
+        with col2_t2:
+            st.subheader(f'5 Game xGF vs xGA Moving Average | {team2}:')
+            average_xGF_xGA(team2)
+        
+        col3_t2, col4_t2 = st.columns(2)
+        
+        with col3_t2:
+            st.subheader(f'Effect of Possession on {team2}:')
+            possession_table = possession_impact(team2)
+            st.table(possession_table)
+        
+        with col4_t2:
+            st.subheader(f'Effect of Opposition Formation on {team2}:')
+            opp_formation_table = opp_formation(team2)
+            st.table(opp_formation_table)
+
+        col5_t2, col6_t2 = st.columns(2)
+
+        with col5_t2:
+            st.subheader(f'Home/Away Performance for {team2}:')
+            home_away_table = home_away(team2)
+            st.table(home_away_table)
+
+        with col6_t2:
+            st.subheader(f'{team2} Results Table:')
+            results_table = team_results(team2)
+            st.table(results_table)
+
+        col7_t2 = st.columns(1)[0]
+
+        with col7_t2:
+            with st.expander(f'{team2} Match Logs:', expanded=True):
+                match_logs_table = match_logs(team2)
+                st.table(match_logs_table)
