@@ -14,7 +14,6 @@ os
 unicodedata
 itertools
 time
-bs4
 BeautifulSoup
 selenium
 webdriver
