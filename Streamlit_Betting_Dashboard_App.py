@@ -83,13 +83,59 @@ points_results = [3, 1, 0]
 #df_filtered = df[columns]
 df['Points'] = np.select(points_conditions, points_results)
 df['Gameweek'] = df.groupby('Team').cumcount() + 1
+
+df = df.sort_values(['Team', 'Gameweek']).reset_index(drop=True)
+
 df['Score'] = df['GF'].astype(str) + '-' + df['GA'].astype(str)
-df['5 Game xGD avg'] = df.groupby('Team')['xGD'].transform(lambda x: x.rolling(window=5, min_periods=1).mean())
-df['5 Game xGF avg'] = df.groupby('Team')['xG'].transform(lambda x: x.rolling(window=5, min_periods=1).mean())
-df['5 Game xGA avg'] = df.groupby('Team')['xGA'].transform(lambda x: x.rolling(window=5, min_periods=1).mean())
-df['10 Game xGF avg'] = df.groupby('Team')['xG'].transform(lambda x: x.rolling(window=10, min_periods=1).mean())
-df['10 Game xGA avg'] = df.groupby('Team')['xGA'].transform(lambda x: x.rolling(window=10, min_periods=1).mean())
-df['10 Game xGD avg'] = df.groupby('Team')['xGD'].transform(lambda x: x.rolling(window=10, min_periods=1).mean())
+#df['5 Game xGD avg'] = df.groupby('Team')['xGD'].transform(lambda x: x.rolling(window=5, min_periods=1).mean())
+df['5 Game xGD avg'] = (
+    df.groupby('Team', group_keys=False)
+      .apply(lambda g: g.assign(
+          **{'5 Game xGD avg': g['xGD'].rolling(window=5, min_periods=1).mean()}
+      ))
+      ['5 Game xGD avg']
+)
+#df['5 Game xGF avg'] = df.groupby('Team')['xG'].transform(lambda x: x.rolling(window=5, min_periods=1).mean())
+df['5 Game xGF avg'] = (
+    df.groupby('Team', group_keys=False)
+      .apply(lambda g: g.assign(
+          **{'5 Game xGF avg': g['xG'].rolling(window=5, min_periods=1).mean()}
+      ))
+      ['5 Game xGF avg']
+)
+#df['5 Game xGA avg'] = df.groupby('Team')['xGA'].transform(lambda x: x.rolling(window=5, min_periods=1).mean())
+df['5 Game xGA avg'] = (
+    df.groupby('Team', group_keys=False)
+      .apply(lambda g: g.assign(
+          **{'5 Game xGA avg': g['xGA'].rolling(window=5, min_periods=1).mean()}
+      ))
+      ['5 Game xGA avg']
+)
+#df['10 Game xGD avg'] = df.groupby('Team')['xGD'].transform(lambda x: x.rolling(window=10, min_periods=1).mean())
+df['10 Game xGD avg'] = (
+    df.groupby('Team', group_keys=False)
+      .apply(lambda g: g.assign(
+          **{'10 Game xGD avg': g['xGD'].rolling(window=10, min_periods=1).mean()}
+      ))
+      ['10 Game xGD avg']
+)
+#df['10 Game xGF avg'] = df.groupby('Team')['xG'].transform(lambda x: x.rolling(window=10, min_periods=1).mean())
+df['10 Game xGF avg'] = (
+    df.groupby('Team', group_keys=False)
+      .apply(lambda g: g.assign(
+          **{'10 Game xGF avg': g['xG'].rolling(window=10, min_periods=1).mean()}
+      ))
+      ['10 Game xGF avg']
+)
+#df['10 Game xGA avg'] = df.groupby('Team')['xGA'].transform(lambda x: x.rolling(window=10, min_periods=1).mean())
+df['10 Game xGA avg'] = (
+    df.groupby('Team', group_keys=False)
+      .apply(lambda g: g.assign(
+          **{'10 Game xGA avg': g['xGA'].rolling(window=10, min_periods=1).mean()}
+      ))
+      ['10 Game xGA avg']
+)
+
 df['Formation'] = df['Formation'].replace('5-3-2', '3-5-2').replace('3-5-1-1', '3-5-2').replace('5-4-1', '3-4-3').replace('4-1-4-1', '4-3-3').replace('4-4-1-1', '4-2-3-1').replace('4-5-1', '4-3-3').replace('3-2-4-1', '4-3-3').replace('3-1-4-2', '3-5-2').replace('4-1-3-2', '4-4-2')
 df['Opp Formation'] = df['Opp Formation'].replace('5-3-2', '3-5-2').replace('3-5-1-1', '3-5-2').replace('5-4-1', '3-4-3').replace('4-1-4-1', '4-3-3').replace('4-4-1-1', '4-2-3-1').replace('4-5-1', '4-3-3').replace('3-2-4-1', '4-3-3').replace('3-1-4-2', '3-5-2').replace('4-1-3-2', '4-4-2')
 
@@ -775,15 +821,18 @@ def xg_league_table(league, last_n_games=5):
     all_results = []
 
     for team in league_data['Team'].unique():
-        team_data = league_data[league_data['Team'] == team]
+        team_data = league_data[league_data['Team'] == team].sort_values('Gameweek')
 
-        # Sort by Gameweek and take last N games
-        last_games = team_data.sort_values('Gameweek', ascending=False).head(last_n_games)
+        # Take the last row (most recent game)
+        last_row = team_data.iloc[-1] if not team_data.empty else None
 
-        xGF = last_games[f'{last_n_games} Game xGF avg'].iloc[-1] if not last_games.empty else 0
-        xGA = last_games[f'{last_n_games} Game xGA avg'].iloc[-1] if not last_games.empty else 0
-        xGD = last_games[f'{last_n_games} Game xGD avg'].iloc[-1] if not last_games.empty else 0
-        games_played = last_games['Gameweek'].count() if not last_games.empty else 0
+        if last_row is not None:
+            xGF = last_row[f'{last_n_games} Game xGF avg']
+            xGA = last_row[f'{last_n_games} Game xGA avg']
+            xGD = last_row[f'{last_n_games} Game xGD avg']
+            games_played = team_data['Gameweek'].count()
+        else:
+            xGF = xGA = xGD = games_played = 0
 
         all_results.append({
             'Team': team,
@@ -805,28 +854,27 @@ def xg_league_table(league, last_n_games=5):
 
     # ✅ xGD — use same logic you’ve always used
     def color_xgd(value):
-        norm_value = (value + 1.4) / 2.8  # Scale -1.4 to +1.4
+        norm_value = (value + 1.4) / 2.8
         norm_value = np.clip(norm_value, 0, 1)
-        color = cm.RdYlGn(norm_value)  # Red = bad, Green = good
+        color = cm.RdYlGn(norm_value)
         r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
         font = text_color(r, g, b)
         return f'background-color: rgb({r},{g},{b}); color: {font}'
 
-    # ✅ xGF — higher is better → greener with same feel
     def color_xgf(value):
-        norm_value = np.clip(value / 2.5, 0, 1)  # 0 → red, 2.5+ → green
+        norm_value = np.clip(value / 2, 0, 1)
         color = cm.RdYlGn(norm_value)
         r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
         font = text_color(r, g, b)
         return f'background-color: rgb({r},{g},{b}); color: {font}'
 
-    # ✅ xGA — lower is better → reverse logic
     def color_xga(value):
-        norm_value = 1 - np.clip(value / 2.5, 0, 1)  # 0 → green, 2.5+ → red
+        norm_value = 1 - np.clip(value / 2, 0, 1)
         color = cm.RdYlGn(norm_value)
         r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
         font = text_color(r, g, b)
         return f'background-color: rgb({r},{g},{b}); color: {font}'
+
 
     # Apply styling
     styled_df = results_df.style.applymap(color_xgd, subset=['xGD']) \
