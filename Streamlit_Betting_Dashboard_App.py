@@ -836,7 +836,6 @@ def xg_league_table(league, last_n_games=5):
 
         all_results.append({
             'Team': team,
-            'Games': games_played,
             'xGF': xGF,
             'xGA': xGA,
             'xGD': xGD
