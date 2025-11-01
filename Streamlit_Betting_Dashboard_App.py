@@ -241,15 +241,18 @@ def average_xGF_xGA(team):
     plt.legend()  # Add legend to the plot
     st.pyplot(plt)  # Call the show method
 
-def possession_impact(team):
+import numpy as np
+import pandas as pd
+from matplotlib import cm
 
+def possession_impact(team):
     team_data = df_new[df_new['Team'] == team]
 
-    #filter data based on possession
+    # Filter data based on possession
     possession_51 = team_data[team_data['Poss'] >= 50]
     possession_49 = team_data[team_data['Poss'] <= 49]
 
-    # Calculate average points and xGD for possession >= 50
+    # Calculate averages and counts
     avg_points_51 = possession_51['Points'].astype(float).mean() if not possession_51.empty else 0
     avg_xGD_51 = possession_51['xGD'].mean() if not possession_51.empty else 0
     count_games_51 = possession_51['Gameweek'].count() if not possession_51.empty else 0
@@ -257,15 +260,14 @@ def possession_impact(team):
     count_draws_51 = possession_51['Result'].value_counts().get('D', 0) if not possession_51.empty else 0
     count_losses_51 = possession_51['Result'].value_counts().get('L', 0) if not possession_51.empty else 0
 
-    # Calculate average points and xGD for possession < 50
     avg_points_49 = possession_49['Points'].astype(float).mean() if not possession_49.empty else 0
     avg_xGD_49 = possession_49['xGD'].mean() if not possession_49.empty else 0
-    count_games_49 = possession_49['Gameweek'].count() if not possession_51.empty else 0
-    count_wins_49 = possession_49['Result'].value_counts().get('W', 0) if not possession_51.empty else 0
-    count_draws_49 = possession_49['Result'].value_counts().get('D', 0) if not possession_51.empty else 0
-    count_losses_49 = possession_49['Result'].value_counts().get('L', 0) if not possession_51.empty else 0
+    count_games_49 = possession_49['Gameweek'].count() if not possession_49.empty else 0
+    count_wins_49 = possession_49['Result'].value_counts().get('W', 0) if not possession_49.empty else 0
+    count_draws_49 = possession_49['Result'].value_counts().get('D', 0) if not possession_49.empty else 0
+    count_losses_49 = possession_49['Result'].value_counts().get('L', 0) if not possession_49.empty else 0
 
-    # Create a DataFrame to display the results in a single row
+    # Create DataFrame
     results_df = pd.DataFrame({
         'Possession': ['>= 50', '< 50'],
         'Games': [count_games_51, count_games_49],
@@ -276,34 +278,44 @@ def possession_impact(team):
         'xGD': [avg_xGD_51, avg_xGD_49]
     })
 
-    # Define a function to apply color mapping for Points per Game
+    # Function to compute contrasting text color
+    def text_color(r, g, b):
+        # Perceived brightness: formula for contrast
+        brightness = (r*299 + g*587 + b*114)/1000
+        return 'black' if brightness > 125 else 'white'
+
+    # Color mapping for Points per Game
     def color_points(value):
-        norm_value = (value - 0.5) / 2  # Scale Points from 0.5 to 2.5 to [0, 1]
-        norm_value = np.clip(norm_value, 0, 1)  # Ensure the value is within [0, 1]
-        color = cm.RdYlGn(norm_value)  # Use RdYlGn colormap for scaling
-        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+        norm_value = (value - 0.5) / 2  # Scale Points from 0.5 to 2.5
+        norm_value = np.clip(norm_value, 0, 1)
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
 
-    # Define a function to apply color mapping for xGD
+    # Color mapping for xGD
     def color_xgd(value):
-        norm_value = (value + 1.4) / 2.8  # Scale xGD from -1.4 to 1.4 to [0, 1])
-        color = cm.RdYlGn(norm_value)  # Use the RdYlGn colormap
-        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+        norm_value = (value + 1.4) / 2.8  # Scale xGD from -1.4 to 1.4
+        norm_value = np.clip(norm_value, 0, 1)
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
 
-    # Apply the styling to the DataFrame
+    # Apply styling
     styled_df = results_df.style.applymap(color_points, subset=['Points per Game']) \
                                  .applymap(color_xgd, subset=['xGD'])
 
     return styled_df
 
 def home_away(team):
-
     team_data = df_new[df_new['Team'] == team]
 
-    #filter data based on home/away
+    # Filter data based on home/away
     home = team_data[team_data['Venue'] == 'Home']
     away = team_data[team_data['Venue'] == 'Away']
 
-    # Calculate average points and xGD for home/away
+    # Calculate stats
     avg_points_h = home['Points'].astype(float).mean() if not home.empty else 0
     avg_xGD_h = home['xGD'].mean() if not home.empty else 0
     count_games_h = home['Gameweek'].count() if not home.empty else 0
@@ -311,7 +323,6 @@ def home_away(team):
     count_draws_h = home['Result'].value_counts().get('D', 0) if not home.empty else 0
     count_losses_h = home['Result'].value_counts().get('L', 0) if not home.empty else 0
 
-    # Calculate average points and xGD for home/away
     avg_points_a = away['Points'].astype(float).mean() if not away.empty else 0
     avg_xGD_a = away['xGD'].mean() if not away.empty else 0
     count_games_a = away['Gameweek'].count() if not away.empty else 0
@@ -319,7 +330,7 @@ def home_away(team):
     count_draws_a = away['Result'].value_counts().get('D', 0) if not away.empty else 0
     count_losses_a = away['Result'].value_counts().get('L', 0) if not away.empty else 0
 
-    # Create a DataFrame to display the results in a single row
+    # DataFrame
     results_df = pd.DataFrame({
         'Venue': ['Home', 'Away'],
         'Games': [count_games_h, count_games_a],
@@ -330,43 +341,39 @@ def home_away(team):
         'xGD': [avg_xGD_h, avg_xGD_a]
     })
 
-    # Define a function to apply color mapping for Points per Game
+    # Helper for text color
+    def text_color(r, g, b):
+        brightness = (r*299 + g*587 + b*114)/1000
+        return 'black' if brightness > 125 else 'white'
+
+    # Color functions
     def color_points(value):
-        norm_value = (value - 0.5) / 2  # Scale Points from 0.5 to 2.5 to [0, 1]
-        norm_value = np.clip(norm_value, 0, 1)  # Ensure the value is within [0, 1]
-        color = cm.RdYlGn(norm_value)  # Use RdYlGn colormap for scaling
-        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+        norm_value = (value - 0.5) / 2
+        norm_value = np.clip(norm_value, 0, 1)
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
 
-
-    # Define a function to apply color mapping for xGD
     def color_xgd(value):
-        norm_value = (value + 1.4) / 2.8  # Scale xGD from -1.4 to 1.4 to [0, 1])
-        color = cm.RdYlGn(norm_value)  # Use the RdYlGn colormap
-        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+        norm_value = (value + 1.4) / 2.8
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
 
-    # Apply the styling to the DataFrame
     styled_df = results_df.style.applymap(color_points, subset=['Points per Game']) \
-                                 .applymap(color_xgd, subset=['xGD'])
-
+                                .applymap(color_xgd, subset=['xGD'])
     return styled_df
 
-import pandas as pd
-
 def opp_formation(team):
-    # Filter the data for the specific team
     team_data = df_new[df_new['Team'] == team]
-
-    # Get the unique opposition formations
     unique_formations = team_data['Opp Formation'].unique()
-
-    # Initialize a list to hold results for each formation
     results = []
 
     for formation in unique_formations:
-        # Filter the data for the specific formation
         formation_data = team_data[team_data['Opp Formation'] == formation]
 
-        # Calculate the statistics for the formation
         avg_points = formation_data['Points'].astype(float).mean() if not formation_data.empty else 0
         avg_xGD = formation_data['xGD'].mean() if not formation_data.empty else 0
         count_games = formation_data['Gameweek'].count() if not formation_data.empty else 0
@@ -374,7 +381,6 @@ def opp_formation(team):
         count_draws = formation_data['Result'].value_counts().get('D', 0) if not formation_data.empty else 0
         count_losses = formation_data['Result'].value_counts().get('L', 0) if not formation_data.empty else 0
 
-        # Append the results as a dictionary
         results.append({
             'Oppo Formation': formation,
             'Games': count_games,
@@ -385,228 +391,157 @@ def opp_formation(team):
             'xGD': avg_xGD
         })
 
-    # Convert the list of results into a DataFrame
     results_df = pd.DataFrame(results)
 
-    # Define a function to apply color mapping for Points per Game
+    def text_color(r, g, b):
+        brightness = (r*299 + g*587 + b*114)/1000
+        return 'black' if brightness > 125 else 'white'
+
     def color_points(value):
-        norm_value = (value - 0.5) / 2  # Scale Points from 0.5 to 2.5 to [0, 1]
-        norm_value = np.clip(norm_value, 0, 1)  # Ensure the value is within [0, 1]
-        color = cm.RdYlGn(norm_value)  # Use RdYlGn colormap for scaling
-        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+        norm_value = (value - 0.5) / 2
+        color = cm.RdYlGn(np.clip(norm_value, 0, 1))
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
 
-
-    # Define a function to apply color mapping for xGD
     def color_xgd(value):
-        norm_value = (value + 1.4) / 2.8  # Scale xGD from -1.4 to 1.4 to [0, 1])
-        color = cm.RdYlGn(norm_value)  # Use the RdYlGn colormap
-        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+        norm_value = (value + 1.4) / 2.8
+        color = cm.RdYlGn(np.clip(norm_value, 0, 1))
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
 
-    # Apply the styling to the DataFrame
     styled_df = results_df.style.applymap(color_points, subset=['Points per Game']) \
-                                 .applymap(color_xgd, subset=['xGD'])
-
+                                .applymap(color_xgd, subset=['xGD'])
     return styled_df
 
 def get_formation_analysis(team1, team2):
-    """Analyze formation usage and performance against most used formations."""
     team1_data = df_new[df_new['Team'] == team1]
     team2_data = df_new[df_new['Team'] == team2]
-    
-    # Get most used formation for each team
+
     team1_formation = team1_data['Formation'].mode().iloc[0]
     team1_formation_count = team1_data['Formation'].value_counts().iloc[0]
     team2_formation = team2_data['Formation'].mode().iloc[0]
     team2_formation_count = team2_data['Formation'].value_counts().iloc[0]
-    
-    # Analyze team1's performance against team2's most used formation
-    team1_vs_formation = team1_data[team1_data['Opp Formation'] == team2_formation]
-    results_team1 = []
-    
-    for formation in team1_vs_formation['Formation'].unique():
-        formation_data = team1_vs_formation[team1_vs_formation['Formation'] == formation]
-        
-        # Calculate statistics
-        count_games = formation_data['Gameweek'].count()
-        count_wins = formation_data['Result'].value_counts().get('W', 0)
-        count_draws = formation_data['Result'].value_counts().get('D', 0)
-        count_losses = formation_data['Result'].value_counts().get('L', 0)
-        avg_points = formation_data['Points'].astype(float).mean()
-        avg_xGD = formation_data['xGD'].mean()
-        
-        results_team1.append({
-            'Formation': formation,
-            'Oppo Formation': team2_formation,
-            'Games': count_games,
-            'Wins': count_wins,
-            'Draws': count_draws,
-            'Losses': count_losses,
-            'Points per Game': avg_points,
-            'xGD': avg_xGD
-        })
-    
-    # Analyze team2's performance against team1's most used formation
-    team2_vs_formation = team2_data[team2_data['Opp Formation'] == team1_formation]
-    results_team2 = []
-    
-    for formation in team2_vs_formation['Formation'].unique():
-        formation_data = team2_vs_formation[team2_vs_formation['Formation'] == formation]
-        
-        # Calculate statistics
-        count_games = formation_data['Gameweek'].count()
-        count_wins = formation_data['Result'].value_counts().get('W', 0)
-        count_draws = formation_data['Result'].value_counts().get('D', 0)
-        count_losses = formation_data['Result'].value_counts().get('L', 0)
-        avg_points = formation_data['Points'].astype(float).mean()
-        avg_xGD = formation_data['xGD'].mean()
-        
-        results_team2.append({
-            'Formation': formation,
-            'Oppo Formation': team1_formation,
-            'Games': count_games,
-            'Wins': count_wins,
-            'Draws': count_draws,
-            'Losses': count_losses,
-            'Points per Game': avg_points,
-            'xGD': avg_xGD
-        })
-    
-    # Create separate DataFrames
-    team1_formations = pd.DataFrame(results_team1)
-    team2_formations = pd.DataFrame(results_team2)
-    
-    # Define a function to apply color mapping for Points per Game
+
+    def text_color(r, g, b):
+        brightness = (r*299 + g*587 + b*114)/1000
+        return 'black' if brightness > 125 else 'white'
+
     def color_points(value):
-        norm_value = value / 3  # Scale xGD from -2.5 to 2.5 to [0, 1])
-        color = cm.RdYlGn(norm_value)  # Use the RdYlGn colormap
-        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+        norm_value = value / 3
+        color = cm.RdYlGn(np.clip(norm_value, 0, 1))
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
 
-
-    # Define a function to apply color mapping for xGD
     def color_xgd(value):
-        norm_value = (value + 1.4) / 2.8  # Scale xGD from -1.4 to 1.4 to [0, 1])
-        color = cm.RdYlGn(norm_value)  # Use the RdYlGn colormap
-        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
-    
-    # Apply styling to both DataFrames
+        norm_value = (value + 1.4) / 2.8
+        color = cm.RdYlGn(np.clip(norm_value, 0, 1))
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
+
+    def calc_vs(df, opp_formation):
+        results = []
+        df_vs = df[df['Opp Formation'] == opp_formation]
+        for formation in df_vs['Formation'].unique():
+            f_data = df_vs[df_vs['Formation'] == formation]
+            results.append({
+                'Formation': formation,
+                'Oppo Formation': opp_formation,
+                'Games': f_data['Gameweek'].count(),
+                'Wins': f_data['Result'].value_counts().get('W', 0),
+                'Draws': f_data['Result'].value_counts().get('D', 0),
+                'Losses': f_data['Result'].value_counts().get('L', 0),
+                'Points per Game': f_data['Points'].astype(float).mean(),
+                'xGD': f_data['xGD'].mean()
+            })
+        return pd.DataFrame(results)
+
+    team1_formations = calc_vs(team1_data, team2_formation)
+    team2_formations = calc_vs(team2_data, team1_formation)
+
     if not team1_formations.empty:
-        styled_team1 = team1_formations.style.applymap(color_points, subset=['Points per Game']) \
-                                            .applymap(color_xgd, subset=['xGD'])
-    else:
-        styled_team1 = team1_formations
-        
+        team1_formations = team1_formations.style.applymap(color_points, subset=['Points per Game']) \
+                                                 .applymap(color_xgd, subset=['xGD'])
     if not team2_formations.empty:
-        styled_team2 = team2_formations.style.applymap(color_points, subset=['Points per Game']) \
-                                            .applymap(color_xgd, subset=['xGD'])
-    else:
-        styled_team2 = team2_formations
-    
+        team2_formations = team2_formations.style.applymap(color_points, subset=['Points per Game']) \
+                                                 .applymap(color_xgd, subset=['xGD'])
+
     return {
         'team1_formation': team1_formation,
         'team1_formation_count': team1_formation_count,
         'team2_formation': team2_formation,
         'team2_formation_count': team2_formation_count,
-        'team1_formations': styled_team1,
-        'team2_formations': styled_team2
+        'team1_formations': team1_formations,
+        'team2_formations': team2_formations
     }
 
 def match_logs(team):
 
     team_data = df_new[df_new['Team'] == team]
-
     team_data['Points'] = pd.to_numeric(team_data['Points'], errors='coerce')
 
-    filtered_df = pd.DataFrame(['Gameweek', 'Venue', 'Opponent', 'Formation', 'Opp Formation', 'Score', 'Points', 'xG', 'xGA', 'xGD', 'Poss'],).T
+    filtered_df = pd.DataFrame(['Gameweek', 'Venue', 'Opponent', 'Formation', 'Opp Formation', 
+                                'Score', 'Points', 'xG', 'xGA', 'xGD', 'Poss']).T
     filtered_df = filtered_df.rename(columns=filtered_df.iloc[0])
     filtered_df = filtered_df.reindex(filtered_df.index.drop(0))
 
-    # Select only the columns that are in filtered_df from team_data
     team_data_filtered = team_data[filtered_df.columns]
-
-    # Concatenate the filtered DataFrames
     final_df = pd.concat([filtered_df, team_data_filtered], ignore_index=True)
-    
-    # Define a function to apply color mapping for Points per Game
+
+    def text_color(r, g, b):
+        brightness = (r*299 + g*587 + b*114)/1000
+        return 'black' if brightness > 125 else 'white'
+
     def color_points(value):
         if value < 1:
-            return 'background-color: red; color: white;'
+            r, g, b = 255, 0, 0
         elif 1 <= value < 1.8:
-            return 'background-color: yellow; color: black;'
-        elif value >= 1.8:
-            return 'background-color: green; color: white;'
-        return ''
+            r, g, b = 255, 255, 0
+        else:
+            r, g, b = 0, 128, 0
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
 
-    # Define a function to apply color mapping for xGD
-    #def color_xgd(value):
-        #if value < -0.2:
-            #return 'background-color: red; color: white;'
-        #elif -0.2 <= value < 0.5:
-            #return 'background-color: yellow; color: black;'
-        #elif value >= 0.5:
-            #return 'background-color: green; color: white;'
-        #return ''
-
-    # Define a function to apply color mapping for xGD
     def color_xgd(value):
-        norm_value = (value + 1.4) / 2.8  # Scale xGD from -1.4 to 1.4 to [0, 1])
-        color = cm.RdYlGn(norm_value)  # Use the RdYlGn colormap
-        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
-
-    # Define a function to apply color mapping for xGD
-    #def color_xgf(value):
-        #if value < 0.7:
-            #return 'background-color: red; color: white;'
-        #elif 0.7 <= value < 1.4:
-            #return 'background-color: yellow; color: black;'
-        #elif value >= 1.4:
-            #return 'background-color: green; color: white;'
-        #return ''
+        norm_value = (value + 1.4) / 2.8
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
 
     def color_xgf(value):
-        norm_value = (value - 1)  # Scale xGD from 0 to 5 to [-0.5, 2] with midpoint at 1
-        norm_value = np.clip(norm_value, 0, 1)  # Ensure the value is within [0, 1]
-        color = cm.RdYlGn(norm_value)  # Use RdYlGn colormap for scaling
-        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
-
-    # Define a function to apply color mapping for xGD
-    #def color_xga(value):
-        #if value > 1.4:
-            #return 'background-color: red; color: white;'
-        #elif 1.4 >= value > 0.7:
-            #return 'background-color: yellow; color: black;'
-        #elif value <= 0.7:
-            #return 'background-color: green; color: white;'
-        #return ''
+        norm_value = (value - 1)
+        norm_value = np.clip(norm_value, 0, 1)
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
 
     def color_xga(value):
-        norm_value = (3 - value) / 3  # Scale xGA from 0 to 5 to [1, 0] (green for lower values)
-        norm_value = np.clip(norm_value, 0, 1)  # Ensure the value is within [0, 1]
-        color = cm.RdYlGn(norm_value)  # Use RdYlGn colormap for scaling
-        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
-
-    # Define a function to apply color mapping for possession
-    #def color_poss(value):
-        #if value < 45:
-            #return 'background-color: red; color: white;'
-        #elif 45 <= value < 55:
-            #return 'background-color: yellow; color: black;'
-        #elif value >= 55:
-            #return 'background-color: green; color: white;'
-        #return ''
+        norm_value = (3 - value) / 3
+        norm_value = np.clip(norm_value, 0, 1)
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
 
     def color_poss(value):
-        norm_value = (value - 30) / 40  # Scale Possession from 30 to 70 to [0, 1]
-        norm_value = np.clip(norm_value, 0, 1)  # Ensure the value is within [0, 1]
-        color = cm.RdYlGn(norm_value)  # Use RdYlGn colormap for scaling
-        return f'background-color: rgba({int(color[0] * 255)}, {int(color[1] * 255)}, {int(color[2] * 255)}, 1);'
+        norm_value = (value - 30) / 40
+        norm_value = np.clip(norm_value, 0, 1)
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
 
-    # Apply the styling to the DataFrame
     styled_df = final_df.style.applymap(color_points, subset=['Points']) \
-                                 .applymap(color_xgd, subset=['xGD']) \
-                                    .applymap(color_poss, subset=['Poss']) \
-                                        .applymap(color_xgf, subset=['xG']) \
-                                            .applymap(color_xga, subset=['xGA']) \
-    
+                              .applymap(color_xgd, subset=['xGD']) \
+                              .applymap(color_poss, subset=['Poss']) \
+                              .applymap(color_xgf, subset=['xG']) \
+                              .applymap(color_xga, subset=['xGA'])
+
     return styled_df
 
 ## CREATE STREAMLIT DASHBOARD ##
