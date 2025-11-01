@@ -59,15 +59,15 @@ def get_df(path):
     return data
 
 #pl_table = pd.read_csv(f'{root}Premier League Table 2024-2025.csv')
-pl_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/9ab254f2b8fc278545b0025e4fbde2954b550566/Premier%20League%20Table%202024-2025.csv'
+pl_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/rawlob/5c598eea521c1cac61ca030981a84b3a6e3ce584/Premier%20League%20Table%202025-2026.csv'
 pl_table = pd.read_csv(pl_table_url)
 
 #ch_table = pd.read_csv(f'{root}Championship Table 2024-2025.csv')
-ch_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/9ab254f2b8fc278545b0025e4fbde2954b550566/Championship%20Table%202024-2025.csv'
+ch_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/5c598eea521c1cac61ca030981a84b3a6e3ce584/Championship%20Table%202025-2026.csv'
 ch_table = pd.read_csv(ch_table_url)
 
 #df = pd.read_csv(f'{root}Final FBRef Match Logs for 2024-2025.csv')
-df_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/9ab254f2b8fc278545b0025e4fbde2954b550566/Final%20FBRef%20Match%20Logs%20for%202024-2025.csv'
+df_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/5c598eea521c1cac61ca030981a84b3a6e3ce584/Final%20FBRef%20Match%20Logs%20for%202025-2026.csv'
 df = pd.read_csv(df_url)
 
 df = df[df['Round'].str.contains('Matchweek', case=True)]
