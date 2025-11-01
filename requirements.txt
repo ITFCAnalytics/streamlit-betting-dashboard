@@ -8,8 +8,4 @@ beautifulsoup4
 lxml
 scipy
 streamlit
-itertools
-time
-BeautifulSoup
 selenium
-webdriver
