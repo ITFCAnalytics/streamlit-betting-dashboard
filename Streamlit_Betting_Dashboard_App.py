@@ -269,7 +269,7 @@ def possession_impact(team):
 
     # Create DataFrame
     results_df = pd.DataFrame({
-        'Possession': ['>= 50', '< 50'],
+        'Possession': ['> 50%', '< 50%'],
         'Games': [count_games_51, count_games_49],
         'Wins': [count_wins_51, count_wins_49],
         'Draws': [count_draws_51, count_draws_49],
