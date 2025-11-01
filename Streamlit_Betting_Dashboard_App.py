@@ -59,7 +59,7 @@ def get_df(path):
     return data
 
 #pl_table = pd.read_csv(f'{root}Premier League Table 2024-2025.csv')
-pl_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/rawlob/5c598eea521c1cac61ca030981a84b3a6e3ce584/Premier%20League%20Table%202025-2026.csv'
+pl_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/5c598eea521c1cac61ca030981a84b3a6e3ce584/Premier%20League%20Table%202025-2026.csv'
 pl_table = pd.read_csv(pl_table_url)
 
 #ch_table = pd.read_csv(f'{root}Championship Table 2024-2025.csv')
