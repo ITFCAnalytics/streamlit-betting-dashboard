@@ -87,6 +87,9 @@ df['Score'] = df['GF'].astype(str) + '-' + df['GA'].astype(str)
 df['5 Game xGD avg'] = df.groupby('Team')['xGD'].transform(lambda x: x.rolling(window=5, min_periods=1).mean())
 df['5 Game xGF avg'] = df.groupby('Team')['xG'].transform(lambda x: x.rolling(window=5, min_periods=1).mean())
 df['5 Game xGA avg'] = df.groupby('Team')['xGA'].transform(lambda x: x.rolling(window=5, min_periods=1).mean())
+df['10 Game xGF avg'] = df.groupby('Team')['xG'].transform(lambda x: x.rolling(window=10, min_periods=1).mean())
+df['10 Game xGA avg'] = df.groupby('Team')['xGA'].transform(lambda x: x.rolling(window=10, min_periods=1).mean())
+df['10 Game xGD avg'] = df.groupby('Team')['xGD'].transform(lambda x: x.rolling(window=10, min_periods=1).mean())
 df['Formation'] = df['Formation'].replace('5-3-2', '3-5-2').replace('3-5-1-1', '3-5-2').replace('5-4-1', '3-4-3').replace('4-1-4-1', '4-3-3').replace('4-4-1-1', '4-2-3-1').replace('4-5-1', '4-3-3').replace('3-2-4-1', '4-3-3').replace('3-1-4-2', '3-5-2').replace('4-1-3-2', '4-4-2')
 df['Opp Formation'] = df['Opp Formation'].replace('5-3-2', '3-5-2').replace('3-5-1-1', '3-5-2').replace('5-4-1', '3-4-3').replace('4-1-4-1', '4-3-3').replace('4-4-1-1', '4-2-3-1').replace('4-5-1', '4-3-3').replace('3-2-4-1', '4-3-3').replace('3-1-4-2', '3-5-2').replace('4-1-3-2', '4-4-2')
 
@@ -544,13 +547,302 @@ def match_logs(team):
 
     return styled_df
 
+def home_league_table(league):
+    league_data = df_new[df_new['Comp'] == league]
+
+    all_results = []
+
+    for team in league_data['Team'].unique():
+        team_data = league_data[league_data['Team'] == team]
+        home = team_data[team_data['Venue'] == 'Home']
+
+        avg_points_h = home['Points'].astype(float).mean() if not home.empty else 0
+        avg_xGD_h = home['xGD'].mean() if not home.empty else 0
+        count_games_h = home['Gameweek'].count() if not home.empty else 0
+        count_wins_h = home['Result'].value_counts().get('W', 0) if not home.empty else 0
+        count_draws_h = home['Result'].value_counts().get('D', 0) if not home.empty else 0
+        count_losses_h = home['Result'].value_counts().get('L', 0) if not home.empty else 0
+
+        all_results.append({
+            'Team': team,
+            'Games': count_games_h,
+            'Wins': count_wins_h,
+            'Draws': count_draws_h,
+            'Losses': count_losses_h,
+            'Points per Game': avg_points_h,
+            'xGD': avg_xGD_h
+        })
+
+    results_df = pd.DataFrame(all_results)
+    results_df = results_df.sort_values(by='Points per Game', ascending=False).reset_index(drop=True)
+
+    results_df.insert(0, 'Position', range(1, len(results_df) + 1))
+
+    # Helper for text color
+    def text_color(r, g, b):
+        brightness = (r*299 + g*587 + b*114)/1000
+        return 'black' if brightness > 125 else 'white'
+
+    def color_points(value):
+        norm_value = (value - 0.5) / 2
+        norm_value = np.clip(norm_value, 0, 1)
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
+
+    def color_xgd(value):
+        norm_value = (value + 1.4) / 2.8
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
+
+    styled_df = results_df.style.applymap(color_points, subset=['Points per Game']) \
+                                .applymap(color_xgd, subset=['xGD'])
+
+    return styled_df
+
+def away_league_table(league):
+    league_data = df_new[df_new['Comp'] == league]
+
+    all_results = []
+
+    for team in league_data['Team'].unique():
+        team_data = league_data[league_data['Team'] == team]
+        away = team_data[team_data['Venue'] == 'Away']
+
+        avg_points_a = away['Points'].astype(float).mean() if not away.empty else 0
+        avg_xGD_a = away['xGD'].mean() if not away.empty else 0
+        count_games_a = away['Gameweek'].count() if not away.empty else 0
+        count_wins_a = away['Result'].value_counts().get('W', 0) if not away.empty else 0
+        count_draws_a = away['Result'].value_counts().get('D', 0) if not away.empty else 0
+        count_losses_a = away['Result'].value_counts().get('L', 0) if not away.empty else 0
+
+        all_results.append({
+            'Team': team,
+            'Games': count_games_a,
+            'Wins': count_wins_a,
+            'Draws': count_draws_a,
+            'Losses': count_losses_a,
+            'Points per Game': avg_points_a,
+            'xGD': avg_xGD_a
+        })
+
+    results_df = pd.DataFrame(all_results)
+    results_df = results_df.sort_values(by='Points per Game', ascending=False).reset_index(drop=True)
+
+    results_df.insert(0, 'Position', range(1, len(results_df) + 1))
+
+    # Helper for text color
+    def text_color(r, g, b):
+        brightness = (r*299 + g*587 + b*114)/1000
+        return 'black' if brightness > 125 else 'white'
+
+    def color_points(value):
+        norm_value = (value - 0.5) / 2
+        norm_value = np.clip(norm_value, 0, 1)
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
+
+    def color_xgd(value):
+        norm_value = (value + 1.4) / 2.8
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
+
+    styled_df = results_df.style.applymap(color_points, subset=['Points per Game']) \
+                                .applymap(color_xgd, subset=['xGD'])
+
+    return styled_df
+
+def league_table_over_50(league):
+    league_data = df_new[df_new['Comp'] == league]
+    all_results = []
+
+    for team in league_data['Team'].unique():
+        team_data = league_data[league_data['Team'] == team]
+        possession_51 = team_data[team_data['Poss'] >= 50]
+
+        avg_points = possession_51['Points'].astype(float).mean() if not possession_51.empty else 0
+        avg_xGD = possession_51['xGD'].mean() if not possession_51.empty else 0
+        count_games = possession_51['Gameweek'].count() if not possession_51.empty else 0
+        count_wins = possession_51['Result'].value_counts().get('W', 0) if not possession_51.empty else 0
+        count_draws = possession_51['Result'].value_counts().get('D', 0) if not possession_51.empty else 0
+        count_losses = possession_51['Result'].value_counts().get('L', 0) if not possession_51.empty else 0
+
+        all_results.append({
+            'Team': team,
+            'Games': count_games,
+            'Wins': count_wins,
+            'Draws': count_draws,
+            'Losses': count_losses,
+            'Points per Game': avg_points,
+            'xGD': avg_xGD
+        })
+
+    results_df = pd.DataFrame(all_results)
+    results_df = results_df.sort_values(by='Points per Game', ascending=False).reset_index(drop=True)
+    results_df.insert(0, 'Position', range(1, len(results_df) + 1))
+
+    # Helper for text color
+    def text_color(r, g, b):
+        brightness = (r*299 + g*587 + b*114)/1000
+        return 'black' if brightness > 125 else 'white'
+
+    def color_points(value):
+        norm_value = (value - 0.5) / 2
+        norm_value = np.clip(norm_value, 0, 1)
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
+
+    def color_xgd(value):
+        norm_value = (value + 1.4) / 2.8
+        norm_value = np.clip(norm_value, 0, 1)
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
+
+    styled_df = results_df.style.applymap(color_points, subset=['Points per Game']) \
+                                .applymap(color_xgd, subset=['xGD'])
+
+    return styled_df
+
+def league_table_under_50(league):
+    league_data = df_new[df_new['Comp'] == league]
+    all_results = []
+
+    for team in league_data['Team'].unique():
+        team_data = league_data[league_data['Team'] == team]
+        possession_49 = team_data[team_data['Poss'] < 50]
+
+        avg_points = possession_49['Points'].astype(float).mean() if not possession_49.empty else 0
+        avg_xGD = possession_49['xGD'].mean() if not possession_49.empty else 0
+        count_games = possession_49['Gameweek'].count() if not possession_49.empty else 0
+        count_wins = possession_49['Result'].value_counts().get('W', 0) if not possession_49.empty else 0
+        count_draws = possession_49['Result'].value_counts().get('D', 0) if not possession_49.empty else 0
+        count_losses = possession_49['Result'].value_counts().get('L', 0) if not possession_49.empty else 0
+
+        all_results.append({
+            'Team': team,
+            'Games': count_games,
+            'Wins': count_wins,
+            'Draws': count_draws,
+            'Losses': count_losses,
+            'Points per Game': avg_points,
+            'xGD': avg_xGD
+        })
+
+    results_df = pd.DataFrame(all_results)
+    results_df = results_df.sort_values(by='Points per Game', ascending=False).reset_index(drop=True)
+    results_df.insert(0, 'Position', range(1, len(results_df) + 1))
+
+    # Helper for text color
+    def text_color(r, g, b):
+        brightness = (r*299 + g*587 + b*114)/1000
+        return 'black' if brightness > 125 else 'white'
+
+    def color_points(value):
+        norm_value = (value - 0.5) / 2
+        norm_value = np.clip(norm_value, 0, 1)
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
+
+    def color_xgd(value):
+        norm_value = (value + 1.4) / 2.8
+        norm_value = np.clip(norm_value, 0, 1)
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
+
+    styled_df = results_df.style.applymap(color_points, subset=['Points per Game']) \
+                                .applymap(color_xgd, subset=['xGD'])
+
+    return styled_df
+
+def xg_league_table(league, last_n_games=5):
+    # Filter league data
+    league_data = df_new[df_new['Comp'] == league]
+    all_results = []
+
+    for team in league_data['Team'].unique():
+        team_data = league_data[league_data['Team'] == team]
+
+        # Sort by Gameweek and take last N games
+        last_games = team_data.sort_values('Gameweek', ascending=False).head(last_n_games)
+
+        xGF = last_games[f'{last_n_games} Game xGF avg'].iloc[-1] if not last_games.empty else 0
+        xGA = last_games[f'{last_n_games} Game xGA avg'].iloc[-1] if not last_games.empty else 0
+        xGD = last_games[f'{last_n_games} Game xGD avg'].iloc[-1] if not last_games.empty else 0
+        games_played = last_games['Gameweek'].count() if not last_games.empty else 0
+
+        all_results.append({
+            'Team': team,
+            'Games': games_played,
+            'xGF': xGF,
+            'xGA': xGA,
+            'xGD': xGD
+        })
+
+    # Create DataFrame
+    results_df = pd.DataFrame(all_results)
+    results_df = results_df.sort_values(by='xGD', ascending=False).reset_index(drop=True)
+    results_df.insert(0, 'Position', range(1, len(results_df) + 1))
+
+        # Helper for text color contrast
+    def text_color(r, g, b):
+        brightness = (r*299 + g*587 + b*114)/1000
+        return 'black' if brightness > 125 else 'white'
+
+    # ✅ xGD — use same logic you’ve always used
+    def color_xgd(value):
+        norm_value = (value + 1.4) / 2.8  # Scale -1.4 to +1.4
+        norm_value = np.clip(norm_value, 0, 1)
+        color = cm.RdYlGn(norm_value)  # Red = bad, Green = good
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
+
+    # ✅ xGF — higher is better → greener with same feel
+    def color_xgf(value):
+        norm_value = np.clip(value / 2.5, 0, 1)  # 0 → red, 2.5+ → green
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
+
+    # ✅ xGA — lower is better → reverse logic
+    def color_xga(value):
+        norm_value = 1 - np.clip(value / 2.5, 0, 1)  # 0 → green, 2.5+ → red
+        color = cm.RdYlGn(norm_value)
+        r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)
+        font = text_color(r, g, b)
+        return f'background-color: rgb({r},{g},{b}); color: {font}'
+
+    # Apply styling
+    styled_df = results_df.style.applymap(color_xgd, subset=['xGD']) \
+                                .applymap(color_xgf, subset=['xGF']) \
+                                .applymap(color_xga, subset=['xGA'])
+
+    return styled_df
+
+
 ## CREATE STREAMLIT DASHBOARD ##
 
 # title, subheader and player/dashboard filter
 st.set_page_config(page_title="Betting Dashboard -", layout="wide")
 st.title(f"Betting Dashboard")
 st.subheader("Select the 'One Team View' to filter by team to see their rolling xGD, results plotted against the current league table, effect of possession and home/away advantage on performances and results. Or filter by the 'Two Team Comparison' to see how teams may match up against each other:")
-function_filter = st.radio("Select a view to apply:", ("One Team View", "Two Team Comparison"))
+function_filter = st.radio("Select a view to apply:", ("One Team View", "Two Team Comparison", "League Tables"))
 
 if function_filter == "One Team View":
     unique_team = df_new['Team'].sort_values().unique()
@@ -597,7 +889,7 @@ if function_filter == "One Team View":
             match_logs_table = match_logs(team_filter)
             st.table(match_logs_table)
 
-else:
+elif function_filter == "Two Team Comparison":
     col1_select, col2_select = st.columns(2)
     
     with col1_select:
@@ -717,3 +1009,51 @@ else:
             with st.expander(f'{team2} Match Logs:', expanded=True):
                 match_logs_table = match_logs(team2)
                 st.table(match_logs_table)
+
+elif function_filter == "League Tables":
+
+    league_selection = st.selectbox('Select a league:', ['Premier League', 'Championship'])
+
+    if league_selection == 'Premier League':
+        league_selection = 'Premier-League'
+    
+    table_selection = st.selectbox('Select a table:', ['Home/Away Tables', 'xG Form Tables', 'Possession Tables'])
+
+    if table_selection == 'Home/Away Tables':
+        col1, col2 = st.columns(2)
+
+        with col1:
+            home_table = home_league_table(league_selection)
+            st.subheader(f'Home Table | {league_selection}:')
+            st.table(home_table)
+
+        with col2:
+            away_table = away_league_table(league_selection)
+            st.subheader(f'Away Table | {league_selection}:')
+            st.table(away_table)
+    
+    elif table_selection == 'Possession Tables':
+        col3, col4 = st.columns(2)
+
+        with col3:
+            over_50_possession_table = league_table_over_50(league_selection)
+            st.subheader(f'Over 50% Possession Table | {league_selection}:')
+            st.table(over_50_possession_table)
+
+        with col4:
+            under_50_possession_table = league_table_under_50(league_selection)
+            st.subheader(f'Under 50% Possession Table | {league_selection}:')
+            st.table(under_50_possession_table)
+
+    elif table_selection == 'xG Form Tables':
+        col5, col6 = st.columns(2)
+
+        with col5:
+            xg_5_form_table = xg_league_table(league_selection, 5)
+            st.subheader(f'xG Form Table (Last 5 Games) | {league_selection}:')
+            st.table(xg_5_form_table)
+
+        with col6:
+            xg_10_form_table = xg_league_table(league_selection, 10)
+            st.subheader(f'xG Form Table (Last 10 Games) | {league_selection}:')
+            st.table(xg_10_form_table)
