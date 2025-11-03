@@ -67,7 +67,8 @@ ch_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw
 ch_table = pd.read_csv(ch_table_url)
 
 #df = pd.read_csv(f'{root}Final FBRef Match Logs for 2024-2025.csv')
-df_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/5c598eea521c1cac61ca030981a84b3a6e3ce584/Final%20FBRef%20Match%20Logs%20for%202025-2026.csv'
+#df_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/5c598eea521c1cac61ca030981a84b3a6e3ce584/Final%20FBRef%20Match%20Logs%20for%202025-2026.csv'
+df_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/7b6d4bed637a048b5f94022916c98ce1cd67d0f1/Final%20FBRef%20Match%20Logs%20for%202024-2025.csv'
 df = pd.read_csv(df_url)
 
 df = df[df['Round'].str.contains('Matchweek', case=True)]
