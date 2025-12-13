@@ -17,6 +17,8 @@ from scipy import stats
 from statistics import mean
 from math import pi
 import streamlit as st
+import ast
+import re
 
 root = os.getcwd() + '/'
 
@@ -59,20 +61,23 @@ def get_df(path):
     return data
 
 #pl_table = pd.read_csv(f'{root}Premier League Table 2025-2026.csv')
-pl_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/b1ca6c4d1581851c7ee9b3370323e1e09a64df77/Premier%20League%20Table%202025-2026.csv'
+pl_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/de175849eb4408a8ab292c0d218f054e620749f3/Premier%20League%20Table%202025-2026.csv'
 pl_table = pd.read_csv(pl_table_url)
 
 pl_table = pl_table[['Position', 'Squad']]
 
 #ch_table = pd.read_csv(f'{root}Championship Table 2025-2026.csv')
-ch_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/b1ca6c4d1581851c7ee9b3370323e1e09a64df77/Championship%20Table%202025-2026.csv'
+ch_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/de175849eb4408a8ab292c0d218f054e620749f3/Championship%20Table%202025-2026.csv'
 ch_table = pd.read_csv(ch_table_url)
 
 ch_table = ch_table[['Position', 'Squad']]
 
 #df = pd.read_csv(f'{root}Final FBRef Match Logs for 2025-2026.csv')
-df_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/b1ca6c4d1581851c7ee9b3370323e1e09a64df77/Final%20FBRef%20Match%20Logs%20for%202025-2026.csv'
+df_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/c5a2133da8c6f4c5d74ff0b82f7aaf592f867902/Final%20FBRef%20Match%20Logs%20for%202025-2026.csv'
 df = pd.read_csv(df_url)
+
+predictions_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/c5a2133da8c6f4c5d74ff0b82f7aaf592f867902/Current%20Gameweek%20Predictions.csv'
+df_predictions = pd.read_csv(predictions_url)
 
 df = df[df['Round'].str.contains('Matchweek', case=True)]
 
@@ -1224,13 +1229,95 @@ def league_table_five_or_over(league):
 
     return styled_df
 
+def parse_score_matrix(matrix_value):
+    """
+    Safely parses a NumPy-style matrix stored as a string in CSV.
+    Handles space-separated values.
+    """
+    if isinstance(matrix_value, str):
+
+        # Remove brackets
+        cleaned = matrix_value.replace('[', '').replace(']', '')
+
+        # Convert whitespace to commas
+        cleaned = re.sub(r'\s+', ',', cleaned.strip())
+
+        # Convert to numpy array
+        arr = np.fromstring(cleaned, sep=',')
+
+        # Reshape to 6x6
+        return arr.reshape(6, 6)
+
+    return np.array(matrix_value)
+
+def scoreline_heatmap(row):
+    home = row["home_team"]
+    away = row["away_team"]
+
+    # Parse matrix
+    matrix = parse_score_matrix(row["Score_Matrix_6x6"])
+
+    # Convert to DataFrame (0–5 goals)
+    grid = pd.DataFrame(
+        matrix * 100,  # convert to percentages
+        index=range(6),
+        columns=range(6)
+    )
+
+    # Plot
+    fig, ax = plt.subplots(figsize=(4.5, 4))  # 👈 smaller figure
+
+    # Transparent background
+    fig.patch.set_alpha(0)
+    ax.set_facecolor("none")
+
+    sns.heatmap(
+        grid,                      # % matrix
+        annot=True,
+        fmt=".1f",
+        cmap="Blues",
+        alpha=0.85,
+        cbar_kws={"label": "Probability (%)"},
+        annot_kws={"color": "white", "size": 9},  # 👈 white labels, smaller text
+        ax=ax
+    )
+
+    # Axis labels + title in white
+    ax.set_xlabel(f"{away} Goals", color="white", fontsize=10)
+    ax.set_ylabel(f"{home} Goals", color="white", fontsize=10)
+    ax.set_title(
+        f"Scoreline Probability Matrix: {home} vs {away}",
+        color="white",
+        fontsize=11,
+        pad=10
+    )
+
+    # Tick labels in white
+    ax.tick_params(colors="white", labelsize=9)
+
+    # Reverse Y axis so 0 at bottom
+    ax.invert_yaxis()
+
+    # Remove spines
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    st.pyplot(fig, transparent=True)
+
+
+
 ## CREATE STREAMLIT DASHBOARD ##
 
 # title, subheader and player/dashboard filter
 st.set_page_config(page_title="Betting Dashboard -", layout="wide")
+
 st.title(f"Betting Dashboard")
-st.subheader("Select the 'One Team View' to filter by team to see their rolling xGD, results plotted against the current league table, effect of possession and home/away advantage on performances and results. Or filter by the 'Two Team Comparison' to see how teams may match up against each other:")
-function_filter = st.radio("Select a view to apply:", ("One Team View", "Two Team Comparison", "League Tables"))
+
+st.subheader("Select the 'One Team View' to filter by team to see their rolling xGD, results plotted against the current league table, effect of possession, home/away advantage, previous venue and days since last game on performances and results.")
+st.subheader("Filter by the 'Two Team Comparison' to see how teams may match up against each other. You can also filter by 'League Tables' to look at all of the tables in the 'One Team View' aggregated per league table.")
+st.subheader("Finally, you can filter by 'Match Simulations' to discover the likelihood of each Scoreline, Both Teams to Score, Over/Under 2.5 Goals and how likely each team is to win:")
+
+function_filter = st.radio("Select a view to apply:", ("One Team View", "Two Team Comparison", "League Tables", "Match Simulations"))
 
 if function_filter == "One Team View":
     unique_team = df_new['Team'].sort_values().unique()
@@ -1482,3 +1569,56 @@ elif function_filter == "League Tables":
             last_venue_away_table = last_venue_away_league_table(league_selection)
             st.subheader(f'Away Venue in Previous Game Table | {league_selection}:')
             st.table(last_venue_away_table)
+
+elif function_filter == 'Match Simulations':
+    unique_match = df_predictions['Match'].sort_values().unique()
+    match_filter = st.selectbox('Select a match:', unique_match, index=0)
+
+    row = df_predictions[
+        df_predictions["Match"] == match_filter
+    ].iloc[0]
+
+    #st.subheader(f'Match Simulations for {match_filter}:')
+
+    st.write("---------------")
+
+    st.subheader(f"Result Simulation | {match_filter}:")
+
+    left, col1, col2, col3, right = st.columns([2, 2, 2, 2, 1])
+
+    st.write("---------------")
+
+    # Home Win / Draw / Away Win
+    with col1:
+        col1.metric("Home Win %", f"{row['P(H)'] * 100:.1f}%")
+    with col2:
+        col2.metric("Draw %", f"{row['P(D)'] * 100:.1f}%")
+    with col3:
+        col3.metric("Away Win %", f"{row['P(A)'] * 100:.1f}%")
+
+    st.subheader(f"BTTS Simulation | {match_filter}:")
+
+    left, col4, col5, right = st.columns([3, 2, 2, 2])
+
+    st.write("---------------")
+
+    # BTTS
+    with col4:
+        col4.metric("BTTS Yes %", f"{row['BTTS_Yes'] * 100:.1f}%")
+    with col5:
+        col5.metric("BTTS No %", f"{row['BTTS_No'] * 100:.1f}%")
+
+    st.subheader(f"Over/Under 2.5 Goals Simulation | {match_filter}:")
+
+    left, col6, col7, right = st.columns([3, 2, 2, 2])
+
+    with col6:
+        col6.metric("Over 2.5 %", f"{row['Over2.5'] * 100:.1f}%")
+    with col7:
+        col7.metric("Under 2.5 %", f"{row['Under2.5'] * 100:.1f}%")
+
+    col8 = st.columns(1)[0]
+
+    with col8:
+        #st.subheader(f'Scoreline Probabilities for {match_filter}:')
+        scoreline_heatmap(row)
