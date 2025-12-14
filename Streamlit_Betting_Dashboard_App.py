@@ -1617,9 +1617,9 @@ elif function_filter == 'Match Simulations':
     with col7:
         col7.metric("Under 2.5 %", f"{row['Under2.5'] * 100:.1f}%")
 
-    left, col8, right = st.columns([2, 2, 2])
-
     st.write("---------------")
+
+    left, col8, right = st.columns([2, 3, 2])
 
     with col8:
         #st.subheader(f'Scoreline Probabilities for {match_filter}:')
