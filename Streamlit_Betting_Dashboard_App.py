@@ -76,8 +76,11 @@ ch_table = ch_table[['Position', 'Squad']]
 df_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/2dec8684bd50af1b0072c84441b5035c77138767/Final%20FBRef%20Match%20Logs%20for%202025-2026.csv'
 df = pd.read_csv(df_url)
 
-predictions_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/2dec8684bd50af1b0072c84441b5035c77138767/Current%20Gameweek%20Predictions.csv'
+predictions_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/7dd1d13939dae6d3e34c61d0078264ad957599d5/Current%20Gameweek%20Predictions.csv'
 df_predictions = pd.read_csv(predictions_url)
+
+ratings_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/01bedb892ea65093afc7af023f74ad20987d811b/Team%20Ratings.csv'
+rating_df = pd.read_csv(ratings_url)
 
 df = df[df['Round'].str.contains('Matchweek', case=True)]
 
@@ -1304,7 +1307,54 @@ def scoreline_heatmap(row):
 
     st.pyplot(fig, transparent=True)
 
+def team_rating_cluster_chart(df, comp, season):
+    df = df[(df['Comp'] == comp) & (df['Season'] == season)]
 
+    max_gw = df['Gameweek'].max()
+    df = df[df['Gameweek'] == max_gw]
+
+    x = df['home_rating']
+    y = df['away_rating']
+    c = df['overall_rating']
+    teams = df['Team']
+
+    # Create figure explicitly
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    scatter = ax.scatter(
+        x,
+        y,
+        c=c,
+        cmap='RdYlGn',
+        edgecolor='black',
+        alpha=0.8,
+        s=100
+    )
+
+    # Colorbar
+    cbar = fig.colorbar(scatter, ax=ax)
+    cbar.set_label('Overall Rating', fontsize=12)
+
+    # Team labels
+    for i, team in enumerate(teams):
+        ax.text(
+            x.iloc[i] + 0.01,
+            y.iloc[i] + 0.01,
+            team,
+            fontsize=9
+        )
+
+    ax.set_xlabel('Home Rating', fontsize=12)
+    ax.set_ylabel('Away Rating', fontsize=12)
+    ax.set_title(
+        f'{comp} | {season} – Home vs Away Rating (Colored by Overall Rating)',
+        fontsize=14
+    )
+
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+
+    st.pyplot(fig)
 
 ## CREATE STREAMLIT DASHBOARD ##
 
@@ -1504,7 +1554,7 @@ elif function_filter == "League Tables":
     if league_selection == 'Premier League':
         league_selection = 'Premier-League'
     
-    table_selection = st.selectbox('Select a table:', ['Home/Away Tables', 'xG Form Tables', 'Possession Tables', 'Schedule Tables'])
+    table_selection = st.selectbox('Select a table:', ['Home/Away Tables', 'xG Form Tables', 'Team Rating Tables', 'Possession Tables', 'Schedule Tables'])
 
     if table_selection == 'Home/Away Tables':
         col1, col2 = st.columns(2)
@@ -1570,6 +1620,13 @@ elif function_filter == "League Tables":
             st.subheader(f'Away Venue in Previous Game Table | {league_selection}:')
             st.table(last_venue_away_table)
 
+    elif table_selection == 'Team Rating Tables':
+        left, col11, right = st.columns([2, 3, 2])
+
+        with col11:
+            team_rating_cluster_chart(rating_df, league_selection, '2025-2026')
+        
+
 elif function_filter == 'Match Simulations':
     unique_match = df_predictions['Match'].sort_values().unique()
     match_filter = st.selectbox('Select a match:', unique_match, index=0)
@@ -1624,3 +1681,37 @@ elif function_filter == 'Match Simulations':
     with col8:
         #st.subheader(f'Scoreline Probabilities for {match_filter}:')
         scoreline_heatmap(row)
+
+    st.write("---------------")
+
+    col9 = st.columns(1)[0]
+
+    model_ratings_cols = [
+        'Season', 'Gameweek', 'Match', 'Home_xG', 'Away_xG', 'P(H)', 'P(D)', 'P(A)',
+        'BTTS_Yes',	'BTTS_No', 'Over2.5', 'Under2.5',
+        'home_team_overall_rating', 'away_team_overall_rating',
+        'home_team_venue_rating', 'away_team_venue_rating',
+        'home_team_overall_seasonal_xGD', 'away_team_overall_seasonal_xGD',
+        'home_team_venue_seasonal_xGD', 'away_team_venue_seasonal_xGD',
+        'home_team_opposition_seasonal_xGD', 'away_team_opposition_seasonal_xGD',
+        'home_team_opposition_venue_seasonal_xGD', 'away_team_opposition_venue_seasonal_xGD',
+        'home_team_overall_5game_xGD', 'away_team_overall_5game_xGD',
+        'home_team_venue_5game_xGD', 'away_team_venue_5game_xGD',
+        'home_team_overall_average_possession', 'away_team_overall_average_possession',
+        'home_team_venue_average_possession', 'away_team_venue_average_possession',
+        'home_team_opposition_average_possession', 'away_team_opposition_average_possession',
+        'home_team_opposition_venue_average_possession', 'away_team_opposition_venue_average_possession',
+        'home_team_overall_seasonal_ppg', 'away_team_overall_seasonal_ppg',
+        'home_team_venue_seasonal_ppg', 'away_team_venue_seasonal_ppg',
+        'home_team_opposition_seasonal_ppg', 'away_team_opposition_seasonal_ppg',
+        'home_team_opposition_venue_seasonal_ppg', 'away_team_opposition_venue_seasonal_ppg',
+        'home_team_overall_5game_pointspergame', 'away_team_overall_5game_pointspergame',
+        'home_team_venue_5game_pointspergame', 'away_team_venue_5game_pointspergame',
+        'home_team_dayssincelastgame', 'away_team_dayssincelastgame',
+        'home_team_venue', 'away_team_venue',
+        'home_team_previousvenue', 'away_team_previousvenue'
+    ]
+
+    with col9:
+        with st.expander(f'{match_filter} Model Ratings:', expanded=True):
+            st.table(row[model_ratings_cols].to_frame().T)
