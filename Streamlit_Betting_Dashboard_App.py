@@ -76,7 +76,7 @@ ch_table = ch_table[['Position', 'Squad']]
 df_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/2dec8684bd50af1b0072c84441b5035c77138767/Final%20FBRef%20Match%20Logs%20for%202025-2026.csv'
 df = pd.read_csv(df_url)
 
-predictions_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/216f48975cf9d5e2eb6ab4f7c85ebbf049083f27/Current%20Gameweek%20Predictions.csv'
+predictions_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/3fe44dc6203c89c7d6c796b728193555db2b003c/Current%20Gameweek%20Predictions.csv'
 df_predictions = pd.read_csv(predictions_url)
 
 ratings_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/01bedb892ea65093afc7af023f74ad20987d811b/Team%20Ratings.csv'
