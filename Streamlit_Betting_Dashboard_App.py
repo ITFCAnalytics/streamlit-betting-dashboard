@@ -61,25 +61,25 @@ def get_df(path):
     return data
 
 #pl_table = pd.read_csv(f'{root}Premier League Table 2025-2026.csv')
-pl_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/2dec8684bd50af1b0072c84441b5035c77138767/Premier%20League%20Table%202025-2026.csv'
+pl_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/7dacd38c1c5989d89da53a033120057e3a0e2bc3/Premier%20League%20Table%202025-2026.csv'
 pl_table = pd.read_csv(pl_table_url)
 
 pl_table = pl_table[['Position', 'Squad']]
 
 #ch_table = pd.read_csv(f'{root}Championship Table 2025-2026.csv')
-ch_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/2dec8684bd50af1b0072c84441b5035c77138767/Championship%20Table%202025-2026.csv'
+ch_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/7dacd38c1c5989d89da53a033120057e3a0e2bc3/Championship%20Table%202025-2026.csv'
 ch_table = pd.read_csv(ch_table_url)
 
 ch_table = ch_table[['Position', 'Squad']]
 
 #df = pd.read_csv(f'{root}Final FBRef Match Logs for 2025-2026.csv')
-df_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/2dec8684bd50af1b0072c84441b5035c77138767/Final%20FBRef%20Match%20Logs%20for%202025-2026.csv'
+df_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/7dacd38c1c5989d89da53a033120057e3a0e2bc3/Final%20FBRef%20Match%20Logs%20for%202025-2026.csv'
 df = pd.read_csv(df_url)
 
-predictions_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/3fe44dc6203c89c7d6c796b728193555db2b003c/Current%20Gameweek%20Predictions.csv'
+predictions_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/7dacd38c1c5989d89da53a033120057e3a0e2bc3/Current%20Gameweek%20Predictions.csv'
 df_predictions = pd.read_csv(predictions_url)
 
-ratings_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/01bedb892ea65093afc7af023f74ad20987d811b/Team%20Ratings.csv'
+ratings_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/7dacd38c1c5989d89da53a033120057e3a0e2bc3/Team%20Ratings.csv'
 rating_df = pd.read_csv(ratings_url)
 
 df = df[df['Round'].str.contains('Matchweek', case=True)]
@@ -1307,6 +1307,97 @@ def scoreline_heatmap(row):
 
     st.pyplot(fig, transparent=True)
 
+def str_to_matrix(mat_str, shape=(6, 6)):
+    return np.fromstring(
+        mat_str.replace('[', '').replace(']', ''),
+        sep=' '
+    ).reshape(shape)
+
+def asian_prob_from_matrix(mat, line, side="home"):
+    p = 0.0
+
+    for i in range(mat.shape[0]):
+        for j in range(mat.shape[1]):
+            goal_diff = i - j
+
+            if side == "home":
+                if goal_diff + line > 0:
+                    p += mat[i, j]
+            else:  # away
+                if -goal_diff + line > 0:
+                    p += mat[i, j]
+
+    return p
+
+def asian_odds_matrix(mat):
+    lines = np.arange(2.5, -2.6, -0.5)
+
+    home_odds = []
+    away_odds = []
+
+    for line in lines:
+        p_home = asian_prob_from_matrix(mat, line, side="home")
+        p_away = asian_prob_from_matrix(mat, line, side="away")
+
+        home_odds.append(np.nan if p_home == 0 else 1 / p_home)
+        away_odds.append(np.nan if p_away == 0 else 1 / p_away)
+
+    odds_matrix = np.vstack([home_odds, away_odds])
+
+    return lines, odds_matrix
+
+def plot_asian_heatmap(mat, home_team, away_team):
+
+    # Convert matrix if stored as string
+    if isinstance(mat, str):
+        mat = str_to_matrix(mat)
+
+    lines, odds = asian_odds_matrix(mat)
+
+    # Cap odds at 11 for color scaling
+    odds_clipped = np.clip(odds, 0, 11)
+
+    fig, ax = plt.subplots(figsize=(12, 3), facecolor='none')
+    ax.set_facecolor('none')
+
+    sns.heatmap(
+        odds_clipped,
+        annot=odds,
+        fmt=".2f",
+        cmap="RdYlGn_r",
+        vmin=0,
+        vmax=11,
+        xticklabels=[f"{l:+.1f}" for l in lines],
+        yticklabels=[home_team, away_team],
+        cbar=True,
+        cbar_kws={
+            "label": "Decimal Odds",
+            "shrink": 0.7
+        },
+        annot_kws={
+            "color": "white",
+            "fontsize": 10
+        },
+        linewidths=0,
+        ax=ax
+    )
+
+    # Styling for dark background
+    ax.set_xlabel("Asian Handicap Line", color="white")
+    ax.set_ylabel("")
+
+    ax.tick_params(colors="white")
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    # Colorbar styling
+    cbar = ax.collections[0].colorbar
+    cbar.ax.yaxis.set_tick_params(color='white')
+    plt.setp(cbar.ax.yaxis.get_ticklabels(), color='white')
+    cbar.set_label("Decimal Odds", color="white")
+
+    st.pyplot(fig, transparent=True)
+
 def team_rating_cluster_chart(df, comp, season):
     df = df[(df['Comp'] == comp) & (df['Season'] == season)]
 
@@ -1351,6 +1442,8 @@ def team_rating_cluster_chart(df, comp, season):
         fontsize=14
     )
 
+    ax.set_xlim(-2, 2)
+    ax.set_ylim(-2, 2)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
 
@@ -1684,7 +1777,16 @@ elif function_filter == 'Match Simulations':
 
     st.write("---------------")
 
+    st.subheader(f"Asian Lines | {match_filter}:")
+
     col9 = st.columns(1)[0]
+
+    with col9:
+        plot_asian_heatmap(row['Score_Matrix_6x6'], home_team=row['home_team'], away_team=row['away_team'])
+
+    st.write("---------------")
+
+    col10 = st.columns(1)[0]
 
     model_ratings_cols = [
         'Season', 'Gameweek', 'Match', 'Home_xG', 'Away_xG', 'P(H)', 'P(D)', 'P(A)',
@@ -1712,6 +1814,6 @@ elif function_filter == 'Match Simulations':
         'home_team_previousvenue', 'away_team_previousvenue'
     ]
 
-    with col9:
+    with col10:
         with st.expander(f'{match_filter} Model Ratings:', expanded=False):
             st.table(row[model_ratings_cols].to_frame().T)
