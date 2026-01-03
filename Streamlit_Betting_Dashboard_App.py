@@ -1401,13 +1401,12 @@ def plot_asian_heatmap(mat, home_team, away_team):
 def team_rating_cluster_chart(df, comp, season):
     df = df[(df['Comp'] == comp) & (df['Season'] == season)]
 
-    max_gw = df['Gameweek'].max()
-    df = df[df['Gameweek'] == max_gw]
+    latest_gameweek_df = df.loc[df.groupby('Team')['Gameweek'].idxmax()]
 
-    x = df['home_rating']
-    y = df['away_rating']
-    c = df['overall_rating']
-    teams = df['Team']
+    x = latest_gameweek_df['home_rating']
+    y = latest_gameweek_df['away_rating']
+    c = latest_gameweek_df['overall_rating']
+    teams = latest_gameweek_df['Team']
 
     # Create figure explicitly
     fig, ax = plt.subplots(figsize=(10, 8))
@@ -1419,7 +1418,9 @@ def team_rating_cluster_chart(df, comp, season):
         cmap='RdYlGn',
         edgecolor='black',
         alpha=0.8,
-        s=100
+        s=100,
+        vmin=-1.75,
+        vmax=1.75
     )
 
     # Colorbar
