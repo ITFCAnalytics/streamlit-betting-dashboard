@@ -61,25 +61,25 @@ def get_df(path):
     return data
 
 #pl_table = pd.read_csv(f'{root}Premier League Table 2025-2026.csv')
-pl_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/7dacd38c1c5989d89da53a033120057e3a0e2bc3/Premier%20League%20Table%202025-2026.csv'
+pl_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/8622a76d1c2395b10f9aaf3ec096226958167945/Premier%20League%20Table%202025-2026.csv'
 pl_table = pd.read_csv(pl_table_url)
 
 pl_table = pl_table[['Position', 'Squad']]
 
 #ch_table = pd.read_csv(f'{root}Championship Table 2025-2026.csv')
-ch_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/7dacd38c1c5989d89da53a033120057e3a0e2bc3/Championship%20Table%202025-2026.csv'
+ch_table_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/8622a76d1c2395b10f9aaf3ec096226958167945/Championship%20Table%202025-2026.csv'
 ch_table = pd.read_csv(ch_table_url)
 
 ch_table = ch_table[['Position', 'Squad']]
 
 #df = pd.read_csv(f'{root}Final FBRef Match Logs for 2025-2026.csv')
-df_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/7dacd38c1c5989d89da53a033120057e3a0e2bc3/Final%20FBRef%20Match%20Logs%20for%202025-2026.csv'
+df_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/8622a76d1c2395b10f9aaf3ec096226958167945/Final%20FBRef%20Match%20Logs%20for%202025-2026.csv'
 df = pd.read_csv(df_url)
 
-predictions_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/7dacd38c1c5989d89da53a033120057e3a0e2bc3/Current%20Gameweek%20Predictions.csv'
+predictions_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/8622a76d1c2395b10f9aaf3ec096226958167945/Current%20Gameweek%20Predictions.csv'
 df_predictions = pd.read_csv(predictions_url)
 
-ratings_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/7dacd38c1c5989d89da53a033120057e3a0e2bc3/Team%20Ratings.csv'
+ratings_url = 'https://github.com/ITFCAnalytics/streamlit-betting-dashboard/raw/8622a76d1c2395b10f9aaf3ec096226958167945/Team%20Ratings.csv'
 rating_df = pd.read_csv(ratings_url)
 
 df = df[df['Round'].str.contains('Matchweek', case=True)]
